@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.mentalhealth.mapper.StudentMapper">
+
+  <resultMap id="StudentResultMap" type="com.sl.mentalhealth.entity.Student">
+    <id property="studentId" column="student_id"/>
+    <result property="name" column="name"/>
+    <result property="college" column="college"/>
+    <result property="className" column="class_name"/>
+    <result property="password" column="password"/>
+    <result property="phone" column="phone"/>
+    <result property="grade" column="grade"/>
+    <result property="avatarUrl" column="avatar_url"/>
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    student_id,
+        name,
+        college,
+        class_name,
+        password,
+        phone,
+        grade,
+        avatar_url
+  </sql>
+
+  <select id="selectPageByClassNamesAndKeyword" resultMap="StudentResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from student
+    where class_name in
+    <foreach collection="classNames" item="className" open="(" separator="," close=")">
+      #{className}
+    </foreach>
+    <if test="keyword != null and keyword != ''">
+      and (
+      student_id like concat('%', #{keyword}, '%')
+      or name like concat('%', #{keyword}, '%')
+      )
+    </if>
+    order by student_id asc
+  </select>
+
+  <select id="selectAccessibleStudent" resultMap="StudentResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from student
+    where student_id = #{studentId}
+    and class_name in
+    <foreach collection="classNames" item="className" open="(" separator="," close=")">
+      #{className}
+    </foreach>
+    limit 1
+  </select>
+
+</mapper>

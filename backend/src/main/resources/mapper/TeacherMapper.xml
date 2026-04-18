@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.mentalhealth.mapper.TeacherMapper">
+
+  <resultMap id="TeacherResultMap" type="com.sl.mentalhealth.entity.Teacher">
+    <id property="account" column="account"/>
+    <result property="password" column="password"/>
+    <result property="teacherName" column="teacher_name"/>
+    <result property="officeLocation" column="office_location"/>
+    <result property="phone" column="phone"/>
+    <result property="avatarUrl" column="avatar_url"/>
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    account,
+        password,
+        teacher_name,
+        office_location,
+        phone,
+        avatar_url
+  </sql>
+
+  <select id="selectPageByCondition" resultMap="TeacherResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from teacher
+    <where>
+      <if test="account != null and account != ''">
+        and account like concat('%', #{account}, '%')
+      </if>
+      <if test="teacherName != null and teacherName != ''">
+        and teacher_name like concat('%', #{teacherName}, '%')
+      </if>
+      <if test="officeLocation != null and officeLocation != ''">
+        and office_location like concat('%', #{officeLocation}, '%')
+      </if>
+      <if test="phone != null and phone != ''">
+        and phone like concat('%', #{phone}, '%')
+      </if>
+    </where>
+    order by account asc
+  </select>
+
+</mapper>

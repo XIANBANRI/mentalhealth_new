@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.mentalhealth.mapper.TeacherScheduleMapper">
+
+  <resultMap id="TeacherScheduleResultMap" type="com.sl.mentalhealth.entity.TeacherSchedule">
+    <id property="id" column="id"/>
+    <result property="teacherAccount" column="teacher_account"/>
+    <result property="weekDay" column="week_day"/>
+    <result property="startTime" column="start_time"/>
+    <result property="endTime" column="end_time"/>
+    <result property="maxAppointments" column="max_appointments"/>
+    <result property="remark" column="remark"/>
+    <result property="status" column="status"/>
+    <result property="createdAt" column="created_at"/>
+    <result property="updatedAt" column="updated_at"/>
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id,
+        teacher_account,
+        week_day,
+        start_time,
+        end_time,
+        max_appointments,
+        remark,
+        status,
+        created_at,
+        updated_at
+  </sql>
+
+  <select id="selectByWeekDayAndStatusOrderByStartTimeAsc" resultMap="TeacherScheduleResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from teacher_schedule
+    where week_day = #{weekDay}
+    and status = #{status}
+    order by start_time asc
+  </select>
+
+  <select id="selectByTeacherAccountAndStatusOrderByWeekDayAscStartTimeAsc" resultMap="TeacherScheduleResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from teacher_schedule
+    where teacher_account = #{teacherAccount}
+    and status = #{status}
+    order by week_day asc, start_time asc
+  </select>
+
+  <select id="selectByTeacherAccountAndWeekDayAndStatusOrderByStartTimeAsc" resultMap="TeacherScheduleResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from teacher_schedule
+    where teacher_account = #{teacherAccount}
+    and week_day = #{weekDay}
+    and status = #{status}
+    order by start_time asc
+  </select>
+
+  <select id="selectByIdAndTeacherAccount" resultMap="TeacherScheduleResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from teacher_schedule
+    where id = #{id}
+    and teacher_account = #{teacherAccount}
+    limit 1
+  </select>
+
+  <select id="countByTeacherAccountAndWeekDayAndStartTimeAndEndTimeAndStatus" resultType="java.lang.Long">
+    select count(1)
+    from teacher_schedule
+    where teacher_account = #{teacherAccount}
+      and week_day = #{weekDay}
+      and start_time = #{startTime}
+      and end_time = #{endTime}
+      and status = #{status}
+  </select>
+
+  <select id="countByTeacherAccountAndWeekDayAndStartTimeAndEndTimeAndStatusAndIdNot" resultType="java.lang.Long">
+    select count(1)
+    from teacher_schedule
+    where teacher_account = #{teacherAccount}
+      and week_day = #{weekDay}
+      and start_time = #{startTime}
+      and end_time = #{endTime}
+      and status = #{status}
+      and id != #{id}
+  </select>
+
+  <select id="selectByTeacherAccountAndWeekDayAndStartTimeAndEndTimeAndStatus" resultMap="TeacherScheduleResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from teacher_schedule
+    where teacher_account = #{teacherAccount}
+    and week_day = #{weekDay}
+    and start_time = #{startTime}
+    and end_time = #{endTime}
+    and status = #{status}
+    limit 1
+  </select>
+
+</mapper>

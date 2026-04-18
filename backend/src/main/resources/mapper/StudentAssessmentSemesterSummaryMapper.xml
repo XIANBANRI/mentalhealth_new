@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.mentalhealth.mapper.StudentAssessmentSemesterSummaryMapper">
+
+  <resultMap id="studentAssessmentSemesterSummaryResultMap"
+    type="com.sl.mentalhealth.entity.StudentAssessmentSemesterSummary">
+    <id property="id" column="id"/>
+    <result property="studentId" column="student_id"/>
+    <result property="semester" column="semester"/>
+    <result property="testedCount" column="tested_count"/>
+    <result property="scoreSummary" column="score_summary"/>
+    <result property="semesterLevel" column="semester_level"/>
+    <result property="lastTestedAt" column="last_tested_at"/>
+    <result property="createdAt" column="created_at"/>
+    <result property="updatedAt" column="updated_at"/>
+  </resultMap>
+
+  <select id="selectByStudentIdAndSemester"
+    resultMap="studentAssessmentSemesterSummaryResultMap">
+    SELECT
+      id,
+      student_id,
+      semester,
+      tested_count,
+      score_summary,
+      semester_level,
+      last_tested_at,
+      created_at,
+      updated_at
+    FROM student_assessment_semester_summary
+    WHERE student_id = #{studentId}
+      AND semester = #{semester}
+      LIMIT 1
+  </select>
+
+  <select id="selectByStudentIdOrderByLastTestedAtDescIdDesc"
+    resultMap="studentAssessmentSemesterSummaryResultMap">
+    SELECT
+      id,
+      student_id,
+      semester,
+      tested_count,
+      score_summary,
+      semester_level,
+      last_tested_at,
+      created_at,
+      updated_at
+    FROM student_assessment_semester_summary
+    WHERE student_id = #{studentId}
+    ORDER BY last_tested_at DESC, id DESC
+  </select>
+
+  <select id="countByStudentIdAndSemesterAndSemesterLevel"
+    resultType="java.lang.Integer">
+    SELECT COUNT(1)
+    FROM student_assessment_semester_summary
+    WHERE student_id = #{studentId}
+      AND semester = #{semester}
+      AND semester_level = #{semesterLevel}
+  </select>
+
+  <select id="selectDangerousStudentsBySemesterAndClassNames"
+    resultType="com.sl.mentalhealth.entity.Student">
+    SELECT
+    s.student_id AS studentId,
+    s.name AS name,
+    s.college AS college,
+    s.class_name AS className,
+    s.grade AS grade,
+    s.phone AS phone,
+    s.password AS password,
+    s.avatar_url AS avatarUrl
+    FROM student_assessment_semester_summary ss
+    JOIN student s
+    ON ss.student_id = s.student_id
+    WHERE ss.semester = #{semester}
+    AND ss.semester_level = '危险'
+    AND s.class_name IN
+    <foreach collection="classNames" item="className" open="(" separator="," close=")">
+      #{className}
+    </foreach>
+    ORDER BY ss.last_tested_at DESC, s.student_id ASC
+    LIMIT #{offset}, #{pageSize}
+  </select>
+
+  <select id="countDangerousStudentsBySemesterAndClassNames"
+    resultType="java.lang.Long">
+    SELECT COUNT(s.student_id)
+    FROM student_assessment_semester_summary ss
+    JOIN student s
+    ON ss.student_id = s.student_id
+    WHERE ss.semester = #{semester}
+    AND ss.semester_level = '危险'
+    AND s.class_name IN
+    <foreach collection="classNames" item="className" open="(" separator="," close=")">
+      #{className}
+    </foreach>
+  </select>
+
+  <select id="selectDangerCountByClass"
+    resultType="com.sl.mentalhealth.mapper.result.ClassDangerCountResult">
+    SELECT
+      ccm.class_name AS className,
+      COUNT(DISTINCT sass.student_id) AS dangerCount
+    FROM counselor_class_mapping ccm
+           LEFT JOIN student s
+                     ON s.class_name = ccm.class_name
+           LEFT JOIN student_assessment_semester_summary sass
+                     ON sass.student_id = s.student_id
+                       AND sass.semester = #{semester}
+                       AND sass.semester_level = '危险'
+    WHERE ccm.counselor_account = #{counselorAccount}
+    GROUP BY ccm.class_name
+    ORDER BY ccm.class_name
+  </select>
+
+  <select id="selectDangerCountBySemester"
+    resultType="com.sl.mentalhealth.mapper.result.SemesterDangerCountResult">
+    SELECT
+      sem.semester AS semester,
+      COUNT(DISTINCT CASE
+                       WHEN ccm.counselor_account IS NOT NULL THEN sass.student_id
+        END) AS dangerCount
+    FROM (
+           SELECT '第1学期' AS semester
+           UNION ALL SELECT '第2学期'
+           UNION ALL SELECT '第3学期'
+           UNION ALL SELECT '第4学期'
+           UNION ALL SELECT '第5学期'
+           UNION ALL SELECT '第6学期'
+           UNION ALL SELECT '第7学期'
+           UNION ALL SELECT '第8学期'
+         ) sem
+           LEFT JOIN student_assessment_semester_summary sass
+                     ON sass.semester = sem.semester
+                       AND sass.semester_level = '危险'
+           LEFT JOIN student s
+                     ON s.student_id = sass.student_id
+           LEFT JOIN counselor_class_mapping ccm
+                     ON ccm.class_name = s.class_name
+                       AND ccm.counselor_account = #{counselorAccount}
+    GROUP BY sem.semester
+    ORDER BY CAST(REPLACE(REPLACE(sem.semester, '第', ''), '学期', '') AS UNSIGNED)
+  </select>
+
+  <insert id="insertSummary" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO student_assessment_semester_summary (
+      student_id,
+      semester,
+      tested_count,
+      score_summary,
+      semester_level,
+      last_tested_at,
+      created_at,
+      updated_at
+    ) VALUES (
+               #{studentId},
+               #{semester},
+               #{testedCount},
+               #{scoreSummary},
+               #{semesterLevel},
+               #{lastTestedAt},
+               #{createdAt},
+               #{updatedAt}
+             )
+  </insert>
+
+  <update id="updateSummaryById">
+    UPDATE student_assessment_semester_summary
+    SET student_id = #{studentId},
+        semester = #{semester},
+        tested_count = #{testedCount},
+        score_summary = #{scoreSummary},
+        semester_level = #{semesterLevel},
+        last_tested_at = #{lastTestedAt},
+        created_at = #{createdAt},
+        updated_at = #{updatedAt}
+    WHERE id = #{id}
+  </update>
+
+</mapper>
