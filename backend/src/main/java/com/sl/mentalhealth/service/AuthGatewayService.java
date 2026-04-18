@@ -1,5 +1,6 @@
 package com.sl.mentalhealth.service;
 
+import com.sl.mentalhealth.common.JwtUtil;
 import com.sl.mentalhealth.dto.LoginRequest;
 import com.sl.mentalhealth.kafka.LoginRequestProducer;
 import com.sl.mentalhealth.kafka.message.LoginRequestMessage;
@@ -61,10 +62,13 @@ public class AuthGatewayService {
           requestId, response.getSuccess(), response.getMessage());
 
       if (Boolean.TRUE.equals(response.getSuccess())) {
+        String token = JwtUtil.generateToken(response.getUsername(), response.getRole());
+
         return new LoginResponseVO(
             response.getRole(),
             response.getUsername(),
-            response.getRedirectPath()
+            response.getRedirectPath(),
+            token
         );
       }
 

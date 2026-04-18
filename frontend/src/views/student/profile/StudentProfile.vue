@@ -88,7 +88,7 @@ const profile = reactive({
 })
 
 const assignProfile = (data = {}) => {
-  profile.studentId = data.studentId || ""
+  profile.studentId = data.studentId || localStorage.getItem("studentId") || ""
   profile.name = data.name || ""
   profile.className = data.className || ""
   profile.college = data.college || ""
@@ -97,23 +97,13 @@ const assignProfile = (data = {}) => {
   profile.avatarUrl = data.avatarUrl || ""
   profile.counselorName = data.counselorName || ""
   profile.counselorPhone = data.counselorPhone || ""
-}
 
-const getStudentId = () => {
-  const role = localStorage.getItem("role")
-  const studentId = localStorage.getItem("studentId")
-
-  if (role !== "student") {
-    ElMessage.error("当前登录身份不是学生")
-    return ""
-  }
-
-  if (!studentId) {
-    ElMessage.error("未获取到学生学号，请重新登录")
-    return ""
-  }
-
-  return studentId
+  localStorage.setItem("studentId", profile.studentId || "")
+  localStorage.setItem("studentName", profile.name || "")
+  localStorage.setItem("className", profile.className || "")
+  localStorage.setItem("college", profile.college || "")
+  localStorage.setItem("grade", profile.grade || "")
+  localStorage.setItem("phone", profile.phone || "")
 }
 
 const buildAvatarUrl = (path) => {
@@ -131,6 +121,23 @@ const avatarFallback = computed(() => {
   return "学"
 })
 
+const getStudentId = () => {
+  const role = localStorage.getItem("role")
+  const studentId = localStorage.getItem("studentId") || localStorage.getItem("username")
+
+  if (role !== "student") {
+    ElMessage.error("当前登录身份不是学生")
+    return ""
+  }
+
+  if (!studentId) {
+    ElMessage.error("未获取到学生学号，请重新登录")
+    return ""
+  }
+
+  return studentId
+}
+
 const loadProfile = async () => {
   const studentId = getStudentId()
   if (!studentId) return
@@ -138,7 +145,7 @@ const loadProfile = async () => {
   loading.value = true
 
   try {
-    const result = await request.post("/api/student/profile", { studentId })
+    const result = await request.get("/api/student/profile")
 
     if (result?.success) {
       assignProfile(result.data || {})
@@ -180,7 +187,6 @@ const handleAvatarUpload = async (options) => {
   }
 
   const formData = new FormData()
-  formData.append("studentId", studentId)
   formData.append("file", options.file)
 
   uploading.value = true

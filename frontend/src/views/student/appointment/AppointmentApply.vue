@@ -158,7 +158,6 @@ export default {
       dialogVisible: false,
       currentRow: {},
       applyForm: {
-        studentId: "",
         scheduleId: null,
         appointmentDate: "",
         purpose: "",
@@ -199,32 +198,6 @@ export default {
       return res;
     },
 
-    getStudentId() {
-      const directId =
-          localStorage.getItem("studentId") ||
-          localStorage.getItem("student_id") ||
-          localStorage.getItem("account");
-
-      if (directId) return directId;
-
-      const userText = localStorage.getItem("user");
-      if (userText) {
-        try {
-          const user = JSON.parse(userText);
-          return (
-              user.studentId ||
-              user.student_id ||
-              user.account ||
-              user.username ||
-              ""
-          );
-        } catch (e) {
-          return "";
-        }
-      }
-      return "";
-    },
-
     formatDate(date) {
       const year = date.getFullYear();
       const month = `${date.getMonth() + 1}`.padStart(2, "0");
@@ -256,7 +229,6 @@ export default {
       this.currentRow = {};
       this.dialogVisible = false;
       this.applyForm = {
-        studentId: this.getStudentId(),
         scheduleId: null,
         appointmentDate: this.queryDate,
         purpose: "",
@@ -267,18 +239,10 @@ export default {
     },
 
     async loadMyAppointments() {
-      const studentId = this.getStudentId();
-      if (!studentId) {
-        this.myAppointmentList = [];
-        return;
-      }
-
       try {
-        const res = await request.get("/appointment/my", {
-          params: { studentId }
-        });
+        const res = await request.get("/api/student/appointment/my");
         const result = this.normalizeResult(res);
-        if (result.code === 200) {
+        if (result.code === 200 || result.success === true) {
           this.myAppointmentList = result.data || [];
         } else {
           this.myAppointmentList = [];
@@ -316,14 +280,14 @@ export default {
       try {
         await this.loadMyAppointments();
 
-        const res = await request.get("/appointment/available", {
+        const res = await request.get("/api/student/appointment/available", {
           params: {
             date: this.queryDate
           }
         });
 
         const result = this.normalizeResult(res);
-        if (result.code === 200) {
+        if (result.code === 200 || result.success === true) {
           this.availableList = result.data || [];
         } else {
           this.availableList = [];
@@ -331,19 +295,13 @@ export default {
         }
       } catch (e) {
         this.availableList = [];
-        this.$message.error("查询失败，请稍后重试");
+        this.$message.error(e?.response?.data?.message || "查询失败，请稍后重试");
       } finally {
         this.loading = false;
       }
     },
 
     openApplyDialog(row) {
-      const studentId = this.getStudentId();
-      if (!studentId) {
-        this.$message.warning("未获取到当前学生学号，请检查登录信息存储");
-        return;
-      }
-
       if (!this.queryDate) {
         this.$message.warning("请先选择预约日期");
         return;
@@ -373,7 +331,6 @@ export default {
 
       this.currentRow = { ...row };
       this.applyForm = {
-        studentId,
         scheduleId: row.scheduleId,
         appointmentDate: this.queryDate,
         purpose: "",
@@ -415,10 +372,17 @@ export default {
 
         this.submitLoading = true;
         try {
-          const res = await request.post("/appointment/create", this.applyForm);
+          const payload = {
+            scheduleId: this.applyForm.scheduleId,
+            appointmentDate: this.applyForm.appointmentDate,
+            purpose: this.applyForm.purpose,
+            remark: this.applyForm.remark
+          };
+
+          const res = await request.post("/api/student/appointment/create", payload);
           const result = this.normalizeResult(res);
 
-          if (result.code === 200) {
+          if (result.code === 200 || result.success === true) {
             this.$message.success(result.message || "预约提交成功");
             this.dialogVisible = false;
             await this.loadMyAppointments();

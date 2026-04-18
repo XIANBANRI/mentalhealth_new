@@ -1,6 +1,7 @@
 package com.sl.mentalhealth.controller;
 
 import com.sl.mentalhealth.common.Result;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.service.AdminProfileGatewayService;
 import com.sl.mentalhealth.service.AvatarStorageService;
 import com.sl.mentalhealth.vo.AdminProfileResponseVO;
@@ -22,8 +23,9 @@ public class AdminProfileController {
   }
 
   @GetMapping("/profile")
-  public Result<AdminProfileResponseVO> getProfile(@RequestParam("account") String account) {
+  public Result<AdminProfileResponseVO> getProfile() {
     try {
+      String account = UserContext.getUsername();
       AdminProfileResponseVO vo = adminProfileGatewayService.getAdminProfile(account);
       return Result.success("查询管理员信息成功", vo);
     } catch (Exception e) {
@@ -32,12 +34,13 @@ public class AdminProfileController {
   }
 
   @PostMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public Result<AdminProfileResponseVO> uploadAvatar(@RequestParam("account") String account,
-      @RequestParam("file") MultipartFile file) {
+  public Result<AdminProfileResponseVO> uploadAvatar(@RequestParam("file") MultipartFile file) {
     AvatarStorageService.StorageResult storageResult = null;
     String oldAvatarUrl = null;
 
     try {
+      String account = UserContext.getUsername();
+
       AdminProfileResponseVO oldProfile = adminProfileGatewayService.getAdminProfile(account);
       if (oldProfile != null) {
         oldAvatarUrl = oldProfile.getAvatarUrl();

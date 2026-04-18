@@ -151,15 +151,9 @@ const sortRecordList = (list) => {
 }
 
 const loadRecords = async () => {
-  const studentId = localStorage.getItem("studentId")
-  if (!studentId) {
-    ElMessage.error("未获取到学生学号，请重新登录")
-    return
-  }
-
   loading.value = true
   try {
-    const res = await request.get(`/api/student/assessment/records/${studentId}`)
+    const res = await request.get(`/api/student/assessment/records`)
     if (res?.success) {
       const rawList = res.data || []
       recordList.value = sortRecordList(rawList)

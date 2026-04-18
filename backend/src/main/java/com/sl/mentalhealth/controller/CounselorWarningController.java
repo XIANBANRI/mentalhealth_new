@@ -1,6 +1,7 @@
 package com.sl.mentalhealth.controller;
 
 import com.sl.mentalhealth.common.Result;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.dto.CounselorWarningQueryRequest;
 import com.sl.mentalhealth.service.CounselorWarningGatewayService;
 import com.sl.mentalhealth.service.LocalCounselorWarningService;
@@ -33,7 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/counselor/warning")
+@RequestMapping("/api/counselor/warning")
 @RequiredArgsConstructor
 public class CounselorWarningController {
 
@@ -41,8 +42,9 @@ public class CounselorWarningController {
   private final LocalCounselorWarningService localCounselorWarningService;
 
   @GetMapping("/classes")
-  public Result<List<String>> classes(@RequestParam String counselorAccount) {
+  public Result<List<String>> classes() {
     try {
+      String counselorAccount = UserContext.getUsername();
       List<String> result = counselorWarningGatewayService.listManagedClasses(counselorAccount);
       return Result.success("查询班级列表成功", result);
     } catch (Exception e) {
@@ -53,6 +55,12 @@ public class CounselorWarningController {
   @PostMapping("/list")
   public Result<CounselorWarningPageVO> list(@RequestBody CounselorWarningQueryRequest request) {
     try {
+      String counselorAccount = UserContext.getUsername();
+      if (request == null) {
+        request = new CounselorWarningQueryRequest();
+      }
+      request.setCounselorAccount(counselorAccount);
+
       CounselorWarningPageVO result = counselorWarningGatewayService.listDangerousStudents(request);
       return Result.success("查询预警名单成功", result);
     } catch (Exception e) {
@@ -61,10 +69,10 @@ public class CounselorWarningController {
   }
 
   @GetMapping("/detail")
-  public Result<CounselorWarningDetailVO> detail(@RequestParam String counselorAccount,
-      @RequestParam String studentId,
+  public Result<CounselorWarningDetailVO> detail(@RequestParam String studentId,
       @RequestParam String semester) {
     try {
+      String counselorAccount = UserContext.getUsername();
       CounselorWarningDetailVO result = counselorWarningGatewayService
           .getDangerousStudentDetail(counselorAccount, studentId, semester);
       return Result.success("查询预警详情成功", result);
@@ -74,10 +82,11 @@ public class CounselorWarningController {
   }
 
   @GetMapping("/export")
-  public ResponseEntity<?> export(@RequestParam String counselorAccount,
-      @RequestParam(required = false) String semester,
+  public ResponseEntity<?> export(@RequestParam(required = false) String semester,
       @RequestParam(required = false, defaultValue = "") String className) {
     try {
+      String counselorAccount = UserContext.getUsername();
+
       List<CounselorWarningStudentVO> rows =
           localCounselorWarningService.exportDangerousStudents(
               counselorAccount,

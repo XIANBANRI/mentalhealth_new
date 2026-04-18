@@ -108,6 +108,7 @@ const clearLoginCache = () => {
   localStorage.removeItem("token")
   localStorage.removeItem("role")
   localStorage.removeItem("username")
+  localStorage.removeItem("redirectPath")
   localStorage.removeItem("userInfo")
 
   localStorage.removeItem("studentId")
@@ -125,14 +126,11 @@ const clearLoginCache = () => {
   localStorage.removeItem("counselorId")
   localStorage.removeItem("counselorName")
   localStorage.removeItem("counselorAccount")
+  localStorage.removeItem("counselorAvatarUrl")
 }
 
 const loadCounselorProfile = async () => {
   const role = localStorage.getItem("role")
-  const account =
-      localStorage.getItem("counselorAccount") ||
-      localStorage.getItem("username") ||
-      localStorage.getItem("counselorId")
 
   if (role !== "counselor") {
     ElMessage.error("当前登录身份不是辅导员")
@@ -140,30 +138,27 @@ const loadCounselorProfile = async () => {
     return
   }
 
-  if (!account) {
-    ElMessage.error("未获取到辅导员账号，请重新登录")
-    router.push("/")
-    return
-  }
-
   try {
-    const result = await request.post("/api/counselor/profile", {
-      account
-    })
+    const result = await request.get("/api/counselor/profile")
 
     const success = result?.code === 200 || result?.success === true
 
     if (success) {
       const data = result?.data || {}
 
-      counselor.counselorId = data.counselorId || account
+      counselor.counselorId =
+          data.counselorId ||
+          localStorage.getItem("counselorId") ||
+          localStorage.getItem("counselorAccount") ||
+          localStorage.getItem("username") ||
+          ""
       counselor.name = data.name || ""
       counselor.college = data.college || ""
       counselor.grade = data.grade || ""
       counselor.phone = data.phone || ""
 
-      localStorage.setItem("counselorId", data.counselorId || account)
-      localStorage.setItem("counselorAccount", data.counselorId || account)
+      localStorage.setItem("counselorId", counselor.counselorId)
+      localStorage.setItem("counselorAccount", counselor.counselorId)
       localStorage.setItem("counselorName", data.name || "")
       localStorage.setItem("college", data.college || "")
       localStorage.setItem("grade", data.grade || "")

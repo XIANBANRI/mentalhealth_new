@@ -80,6 +80,7 @@ const clearLoginCache = () => {
   localStorage.removeItem("token")
   localStorage.removeItem("role")
   localStorage.removeItem("username")
+  localStorage.removeItem("redirectPath")
   localStorage.removeItem("userInfo")
 
   localStorage.removeItem("studentId")
@@ -119,113 +120,121 @@ const login = async () => {
     const success = result?.code === 200 || result?.success === true
     const data = result?.data || {}
 
-    if (success) {
-      clearLoginCache()
-
-      const role = data.role || form.role
-      const username = data.username || data.account || form.username
-      const token = result?.token || data?.token || "mock-token"
-
-      localStorage.setItem("token", token)
-      localStorage.setItem("role", role)
-      localStorage.setItem("username", username)
-
-      const userInfo = {
-        role,
-        username
-      }
-
-      if (role === "student") {
-        const studentName = data.name || data.studentName || ""
-
-        localStorage.setItem("studentId", data.studentId || username)
-
-        if (studentName) {
-          localStorage.setItem("studentName", studentName)
-          userInfo.name = studentName
-        }
-        if (data.className) {
-          localStorage.setItem("className", data.className)
-          userInfo.className = data.className
-        }
-        if (data.college) {
-          localStorage.setItem("college", data.college)
-          userInfo.college = data.college
-        }
-        if (data.grade) {
-          localStorage.setItem("grade", data.grade)
-          userInfo.grade = data.grade
-        }
-        if (data.phone) {
-          localStorage.setItem("phone", data.phone)
-          userInfo.phone = data.phone
-        }
-      }
-
-      if (role === "teacher") {
-        const teacherName = data.teacherName || data.name || ""
-
-        localStorage.setItem(
-            "teacherAccount",
-            data.teacherAccount || data.account || username
-        )
-
-        if (teacherName) {
-          localStorage.setItem("teacherName", teacherName)
-          userInfo.name = teacherName
-        }
-        if (data.phone) {
-          localStorage.setItem("teacherPhone", data.phone)
-          userInfo.phone = data.phone
-        }
-        if (data.officeLocation) {
-          localStorage.setItem("officeLocation", data.officeLocation)
-          userInfo.officeLocation = data.officeLocation
-        }
-      }
-
-      if (role === "counselor") {
-        const counselorName = data.name || data.counselorName || ""
-
-        localStorage.setItem(
-            "counselorId",
-            data.counselorId || data.account || username
-        )
-
-        if (counselorName) {
-          localStorage.setItem("counselorName", counselorName)
-          userInfo.name = counselorName
-        }
-        if (data.college) {
-          localStorage.setItem("college", data.college)
-          userInfo.college = data.college
-        }
-        if (data.grade) {
-          localStorage.setItem("grade", data.grade)
-          userInfo.grade = data.grade
-        }
-        if (data.phone) {
-          localStorage.setItem("phone", data.phone)
-          userInfo.phone = data.phone
-        }
-      }
-
-      if (role === "admin") {
-        const adminName = getAdminDisplayName(username, data)
-
-        localStorage.setItem("adminAccount", username)
-        localStorage.setItem("adminName", adminName)
-
-        userInfo.name = adminName
-      }
-
-      localStorage.setItem("userInfo", JSON.stringify(userInfo))
-
-      ElMessage.success(result?.message || "登录成功")
-      router.push(data?.redirectPath || `/${role}`)
-    } else {
+    if (!success) {
       ElMessage.error(result?.message || "登录失败")
+      return
     }
+
+    const role = data.role || form.role
+    const username = data.username || data.account || form.username
+    const redirectPath = data.redirectPath || `/${role}`
+    const token = data.token || result?.token
+
+    if (!token) {
+      ElMessage.error("登录失败：后端未返回 token")
+      return
+    }
+
+    clearLoginCache()
+
+    localStorage.setItem("token", token)
+    localStorage.setItem("role", role)
+    localStorage.setItem("username", username)
+    localStorage.setItem("redirectPath", redirectPath)
+
+    const userInfo = {
+      role,
+      username
+    }
+
+    if (role === "student") {
+      const studentName = data.name || data.studentName || ""
+
+      localStorage.setItem("studentId", data.studentId || username)
+
+      if (studentName) {
+        localStorage.setItem("studentName", studentName)
+        userInfo.name = studentName
+      }
+      if (data.className) {
+        localStorage.setItem("className", data.className)
+        userInfo.className = data.className
+      }
+      if (data.college) {
+        localStorage.setItem("college", data.college)
+        userInfo.college = data.college
+      }
+      if (data.grade) {
+        localStorage.setItem("grade", data.grade)
+        userInfo.grade = data.grade
+      }
+      if (data.phone) {
+        localStorage.setItem("phone", data.phone)
+        userInfo.phone = data.phone
+      }
+    }
+
+    if (role === "teacher") {
+      const teacherName = data.teacherName || data.name || ""
+
+      localStorage.setItem(
+          "teacherAccount",
+          data.teacherAccount || data.account || username
+      )
+
+      if (teacherName) {
+        localStorage.setItem("teacherName", teacherName)
+        userInfo.name = teacherName
+      }
+      if (data.phone) {
+        localStorage.setItem("teacherPhone", data.phone)
+        userInfo.phone = data.phone
+      }
+      if (data.officeLocation) {
+        localStorage.setItem("officeLocation", data.officeLocation)
+        userInfo.officeLocation = data.officeLocation
+      }
+    }
+
+    if (role === "counselor") {
+      const counselorName = data.name || data.counselorName || ""
+
+      localStorage.setItem(
+          "counselorId",
+          data.counselorId || data.account || username
+      )
+
+      if (counselorName) {
+        localStorage.setItem("counselorName", counselorName)
+        userInfo.name = counselorName
+      }
+      if (data.college) {
+        localStorage.setItem("college", data.college)
+        userInfo.college = data.college
+      }
+      if (data.grade) {
+        localStorage.setItem("grade", data.grade)
+        userInfo.grade = data.grade
+      }
+      if (data.phone) {
+        localStorage.setItem("phone", data.phone)
+        userInfo.phone = data.phone
+      }
+    }
+
+    if (role === "admin") {
+      const adminName = getAdminDisplayName(username, data)
+
+      localStorage.setItem("adminAccount", username)
+      localStorage.setItem("adminName", adminName)
+
+      userInfo.name = adminName
+    }
+
+    localStorage.setItem("userInfo", JSON.stringify(userInfo))
+
+    ElMessage.success(result?.message || "登录成功")
+    router.push(redirectPath)
   } catch (error) {
     console.error(error)
     ElMessage.error(
@@ -238,6 +247,7 @@ const login = async () => {
     loading.value = false
   }
 }
+
 const goForget = () => {
   router.push("/forget")
 }

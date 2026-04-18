@@ -1,5 +1,6 @@
 package com.sl.mentalhealth.controller;
 
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.dto.AssessmentSubmitRequest;
 import com.sl.mentalhealth.service.AssessmentGatewayService;
 import org.springframework.http.ResponseEntity;
@@ -52,6 +53,7 @@ public class StudentAssessmentController {
   public ResponseEntity<Map<String, Object>> submit(@RequestBody AssessmentSubmitRequest request) {
     Map<String, Object> result = new HashMap<>();
     try {
+      request.setStudentId(UserContext.getUsername());
       result.put("success", true);
       result.put("message", "提交成功");
       result.put("data", assessmentGatewayService.submit(request));
@@ -63,10 +65,11 @@ public class StudentAssessmentController {
     }
   }
 
-  @GetMapping("/records/{studentId}")
-  public ResponseEntity<Map<String, Object>> getRecords(@PathVariable String studentId) {
+  @GetMapping("/records")
+  public ResponseEntity<Map<String, Object>> getRecords() {
     Map<String, Object> result = new HashMap<>();
     try {
+      String studentId = UserContext.getUsername();
       result.put("success", true);
       result.put("message", "查询成功");
       result.put("data", assessmentGatewayService.getRecords(studentId));

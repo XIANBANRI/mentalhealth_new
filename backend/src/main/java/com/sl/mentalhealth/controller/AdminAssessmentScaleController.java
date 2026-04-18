@@ -1,6 +1,7 @@
 package com.sl.mentalhealth.controller;
 
 import com.sl.mentalhealth.common.Result;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.dto.AssessmentScaleUpdateRequest;
 import com.sl.mentalhealth.kafka.message.AssessmentScaleManageRequestMessage;
 import com.sl.mentalhealth.kafka.message.AssessmentScaleManageResponseMessage;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/admin/assessment-scale")
+@RequestMapping("/api/admin/assessment-scale")
 public class AdminAssessmentScaleController {
 
   private final AssessmentScaleManageGatewayService assessmentScaleManageGatewayService;
@@ -29,10 +30,13 @@ public class AdminAssessmentScaleController {
       @RequestParam("scaleName") String scaleName,
       @RequestParam("scaleType") String scaleType,
       @RequestParam(value = "description", required = false) String description,
-      @RequestParam(value = "operator", required = false, defaultValue = "admin") String operator,
+      @RequestParam(value = "operator", required = false) String operator,
       @RequestPart("questionFile") MultipartFile questionFile,
       @RequestPart("ruleFile") MultipartFile ruleFile) {
     try {
+      String currentAdmin = UserContext.getUsername();
+      String realOperator = (operator == null || operator.trim().isEmpty()) ? currentAdmin : operator;
+
       AssessmentScaleManageRequestMessage message = new AssessmentScaleManageRequestMessage();
       message.setRequestId(UUID.randomUUID().toString());
       message.setAction("IMPORT");
@@ -40,7 +44,7 @@ public class AdminAssessmentScaleController {
       message.setScaleName(scaleName);
       message.setScaleType(scaleType);
       message.setDescription(description);
-      message.setOperator(operator);
+      message.setOperator(realOperator);
       message.setQuestionFileName(questionFile.getOriginalFilename());
       message.setRuleFileName(ruleFile.getOriginalFilename());
       message.setQuestions(assessmentScaleExcelParserService.parseQuestionExcel(questionFile));

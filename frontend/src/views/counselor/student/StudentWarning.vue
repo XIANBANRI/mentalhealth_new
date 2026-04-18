@@ -231,40 +231,6 @@ const pagedRecords = computed(() => {
   return list.slice(start, end)
 })
 
-function getCounselorAccount() {
-  const storageKeys = [
-    "userInfo",
-    "loginUser",
-    "counselorInfo",
-    "user",
-    "account"
-  ]
-
-  for (const key of storageKeys) {
-    const localVal = localStorage.getItem(key)
-    const sessionVal = sessionStorage.getItem(key)
-    const raw = localVal || sessionVal
-
-    if (!raw) continue
-
-    if (key === "account") {
-      return raw
-    }
-
-    try {
-      const parsed = JSON.parse(raw)
-      if (parsed?.counselorAccount) return parsed.counselorAccount
-      if (parsed?.account) return parsed.account
-      if (parsed?.username) return parsed.username
-      if (parsed?.userAccount) return parsed.userAccount
-    } catch {
-      if (raw) return raw
-    }
-  }
-
-  return ""
-}
-
 function buildDefaultFileName() {
   const className = selectedClass.value ? selectedClass.value : "全部班级"
   return `学生预警名单-${selectedSemester.value}-${className}.xlsx`
@@ -318,16 +284,8 @@ function downloadBlob(blob, fileName) {
 }
 
 async function loadClassOptions() {
-  const counselorAccount = getCounselorAccount()
-  if (!counselorAccount) {
-    ElMessage.error("未获取到辅导员账号，请重新登录")
-    return false
-  }
-
   try {
-    const res = await request.get("/counselor/warning/classes", {
-      params: { counselorAccount }
-    })
+    const res = await request.get("/api/counselor/warning/classes")
 
     if (res.code === 200) {
       const actualClassList = res.data || []
@@ -345,22 +303,15 @@ async function loadClassOptions() {
       return false
     }
   } catch (error) {
-    ElMessage.error(error?.message || "查询班级列表失败")
+    ElMessage.error(error?.response?.data?.message || error?.message || "查询班级列表失败")
     return false
   }
 }
 
 async function loadWarningList() {
-  const counselorAccount = getCounselorAccount()
-  if (!counselorAccount) {
-    ElMessage.error("未获取到辅导员账号，请重新登录")
-    return
-  }
-
   tableLoading.value = true
   try {
-    const res = await request.post("/counselor/warning/list", {
-      counselorAccount,
+    const res = await request.post("/api/counselor/warning/list", {
       semester: selectedSemester.value,
       className: selectedClass.value,
       pageNum: pageNum.value,
@@ -374,24 +325,17 @@ async function loadWarningList() {
       ElMessage.error(res.message || "查询预警名单失败")
     }
   } catch (error) {
-    ElMessage.error(error?.message || "查询预警名单失败")
+    ElMessage.error(error?.response?.data?.message || error?.message || "查询预警名单失败")
   } finally {
     tableLoading.value = false
   }
 }
 
 async function handleExport() {
-  const counselorAccount = getCounselorAccount()
-  if (!counselorAccount) {
-    ElMessage.error("未获取到辅导员账号，请重新登录")
-    return
-  }
-
   exportLoading.value = true
   try {
-    const response = await request.get("/counselor/warning/export", {
+    const response = await request.get("/api/counselor/warning/export", {
       params: {
-        counselorAccount,
         semester: selectedSemester.value,
         className: selectedClass.value
       },
@@ -430,21 +374,14 @@ async function handleExport() {
 }
 
 async function handleViewDetail(row) {
-  const counselorAccount = getCounselorAccount()
-  if (!counselorAccount) {
-    ElMessage.error("未获取到辅导员账号，请重新登录")
-    return
-  }
-
   detailDialogVisible.value = true
   detailLoading.value = true
   detailData.value = null
   recordPageNum.value = 1
 
   try {
-    const res = await request.get("/counselor/warning/detail", {
+    const res = await request.get("/api/counselor/warning/detail", {
       params: {
-        counselorAccount,
         studentId: row.studentId,
         semester: selectedSemester.value
       }
@@ -457,7 +394,7 @@ async function handleViewDetail(row) {
       detailDialogVisible.value = false
     }
   } catch (error) {
-    ElMessage.error(error?.message || "查询预警详情失败")
+    ElMessage.error(error?.response?.data?.message || error?.message || "查询预警详情失败")
     detailDialogVisible.value = false
   } finally {
     detailLoading.value = false

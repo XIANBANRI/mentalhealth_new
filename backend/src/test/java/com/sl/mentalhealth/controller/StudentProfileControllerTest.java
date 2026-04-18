@@ -1,9 +1,12 @@
 package com.sl.mentalhealth.controller;
 
+import com.sl.mentalhealth.config.LoginUser;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.dto.StudentProfileRequest;
 import com.sl.mentalhealth.service.AvatarStorageService;
 import com.sl.mentalhealth.service.StudentProfileGatewayService;
 import com.sl.mentalhealth.vo.StudentProfileResponseVO;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -32,30 +35,40 @@ class StudentProfileControllerTest {
   @InjectMocks
   private StudentProfileController controller;
 
+  @AfterEach
+  void tearDown() {
+    UserContext.clear();
+  }
+
   @Test
   void queryProfile_success() {
-    StudentProfileRequest request = mock(StudentProfileRequest.class);
+    UserContext.set(new LoginUser("s001", "student"));
+
     StudentProfileResponseVO vo = mock(StudentProfileResponseVO.class);
+    when(studentProfileGatewayService.queryProfile(any(StudentProfileRequest.class))).thenReturn(vo);
 
-    when(studentProfileGatewayService.queryProfile(request)).thenReturn(vo);
-
-    ResponseEntity<Map<String, Object>> response = controller.queryProfile(request);
+    ResponseEntity<Map<String, Object>> response = controller.queryProfile();
 
     assertEquals(200, response.getStatusCode().value());
     assertNotNull(response.getBody());
     assertEquals(true, response.getBody().get("success"));
     assertEquals("查询成功", response.getBody().get("message"));
     assertSame(vo, response.getBody().get("data"));
+
+    ArgumentCaptor<StudentProfileRequest> captor =
+        ArgumentCaptor.forClass(StudentProfileRequest.class);
+    verify(studentProfileGatewayService).queryProfile(captor.capture());
+    assertEquals("s001", captor.getValue().getStudentId());
   }
 
   @Test
   void queryProfile_whenException_shouldReturnBadRequest() {
-    StudentProfileRequest request = mock(StudentProfileRequest.class);
+    UserContext.set(new LoginUser("s001", "student"));
 
-    when(studentProfileGatewayService.queryProfile(request))
+    when(studentProfileGatewayService.queryProfile(any(StudentProfileRequest.class)))
         .thenThrow(new RuntimeException("查询失败"));
 
-    ResponseEntity<Map<String, Object>> response = controller.queryProfile(request);
+    ResponseEntity<Map<String, Object>> response = controller.queryProfile();
 
     assertEquals(400, response.getStatusCode().value());
     assertNotNull(response.getBody());
@@ -65,6 +78,8 @@ class StudentProfileControllerTest {
 
   @Test
   void uploadAvatar_success_shouldDeleteOldAvatar() {
+    UserContext.set(new LoginUser("s001", "student"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1, 2, 3});
 
@@ -81,7 +96,7 @@ class StudentProfileControllerTest {
     when(studentProfileGatewayService.updateAvatar("s001", "/avatar/student/new.png"))
         .thenReturn(updatedProfile);
 
-    ResponseEntity<Map<String, Object>> response = controller.uploadAvatar("s001", file);
+    ResponseEntity<Map<String, Object>> response = controller.uploadAvatar(file);
 
     assertEquals(200, response.getStatusCode().value());
     assertNotNull(response.getBody());
@@ -99,6 +114,8 @@ class StudentProfileControllerTest {
 
   @Test
   void uploadAvatar_whenUpdateFails_shouldRollbackNewAvatar() {
+    UserContext.set(new LoginUser("s001", "student"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1, 2, 3});
 
@@ -113,7 +130,7 @@ class StudentProfileControllerTest {
     when(studentProfileGatewayService.updateAvatar("s001", "/avatar/student/new.png"))
         .thenThrow(new RuntimeException("更新头像失败"));
 
-    ResponseEntity<Map<String, Object>> response = controller.uploadAvatar("s001", file);
+    ResponseEntity<Map<String, Object>> response = controller.uploadAvatar(file);
 
     assertEquals(400, response.getStatusCode().value());
     assertNotNull(response.getBody());
@@ -125,6 +142,8 @@ class StudentProfileControllerTest {
 
   @Test
   void uploadAvatar_whenOldAvatarBlank_shouldNotDeleteOldAvatar() {
+    UserContext.set(new LoginUser("s001", "student"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1, 2, 3});
 
@@ -141,7 +160,7 @@ class StudentProfileControllerTest {
     when(studentProfileGatewayService.updateAvatar("s001", "/avatar/student/new.png"))
         .thenReturn(updatedProfile);
 
-    ResponseEntity<Map<String, Object>> response = controller.uploadAvatar("s001", file);
+    ResponseEntity<Map<String, Object>> response = controller.uploadAvatar(file);
 
     assertEquals(200, response.getStatusCode().value());
     verify(avatarStorageService, never()).deleteByUrl("/avatar/student/old.png");

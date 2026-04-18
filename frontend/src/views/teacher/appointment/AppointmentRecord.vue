@@ -57,7 +57,11 @@
         </el-table-column>
 
         <el-table-column prop="appointmentNo" label="预约编号" min-width="160" />
-        <el-table-column prop="studentId" label="学生学号" width="120" />
+        <el-table-column label="学生学号" width="120">
+          <template #default="scope">
+            {{ scope.row.studentId || scope.row.studentAccount || "-" }}
+          </template>
+        </el-table-column>
         <el-table-column prop="studentName" label="学生姓名" width="100" />
         <el-table-column prop="appointmentDate" label="预约日期" width="120" />
         <el-table-column prop="startTime" label="开始时间" width="90" />
@@ -67,7 +71,7 @@
 
         <el-table-column label="会诊记录" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ row.offlineRecord || "暂无" }}
+            {{ row.offlineRecord || row.teacherReply || "暂无" }}
           </template>
         </el-table-column>
 
@@ -121,10 +125,6 @@ const queryForm = reactive({
   status: ""
 })
 
-const teacherAccount = computed(() => {
-  return localStorage.getItem("teacherAccount") || localStorage.getItem("username") || ""
-})
-
 const pagedRecordList = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
@@ -158,15 +158,9 @@ const handlePageChange = (page) => {
 }
 
 const loadRecordList = async () => {
-  if (!teacherAccount.value) {
-    ElMessage.error("未获取到老师账号")
-    return
-  }
-
   loading.value = true
   try {
     const result = await request.post("/api/teacher/appointment/record", {
-      teacherAccount: teacherAccount.value,
       studentId: queryForm.studentId,
       appointmentDate: queryForm.appointmentDate,
       status: queryForm.status

@@ -113,6 +113,7 @@ const clearLoginCache = () => {
   localStorage.removeItem("token")
   localStorage.removeItem("role")
   localStorage.removeItem("username")
+  localStorage.removeItem("redirectPath")
   localStorage.removeItem("userInfo")
 
   localStorage.removeItem("teacherAccount")
@@ -139,9 +140,7 @@ const loadTeacherProfile = async () => {
   }
 
   try {
-    const result = await request.post("/api/teacher/profile", {
-      teacherAccount
-    })
+    const result = await request.get("/api/teacher/profile")
 
     const success = result?.code === 200 || result?.success === true
 

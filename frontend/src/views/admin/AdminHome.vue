@@ -100,42 +100,31 @@ const admin = reactive({
   name: ""
 })
 
-const getCurrentAdminAccount = () => {
-  return (
-      localStorage.getItem("adminAccount") ||
-      localStorage.getItem("username") ||
-      ""
-  )
-}
-
 const fetchAdminProfile = async () => {
-  const account = getCurrentAdminAccount()
-
-  if (!account) {
-    admin.account = ""
-    admin.name = ""
-    return
-  }
-
   try {
-    const result = await request.get("/api/admin/profile", {
-      params: { account }
-    })
-
+    const result = await request.get("/api/admin/profile")
     const data = result?.data || {}
 
-    admin.account = data.account || account
+    admin.account =
+        data.account ||
+        localStorage.getItem("adminAccount") ||
+        localStorage.getItem("username") ||
+        ""
     admin.name = data.name || ""
 
-    if (data.account) {
-      localStorage.setItem("adminAccount", data.account)
+    if (admin.account) {
+      localStorage.setItem("adminAccount", admin.account)
     }
     if (data.name) {
       localStorage.setItem("adminName", data.name)
     }
   } catch (error) {
-    admin.account = account
+    admin.account =
+        localStorage.getItem("adminAccount") ||
+        localStorage.getItem("username") ||
+        ""
     admin.name = localStorage.getItem("adminName") || ""
+
     ElMessage.error(
         error?.response?.data?.message ||
         error?.message ||
@@ -148,9 +137,11 @@ const clearLoginCache = () => {
   localStorage.removeItem("token")
   localStorage.removeItem("role")
   localStorage.removeItem("username")
+  localStorage.removeItem("redirectPath")
   localStorage.removeItem("userInfo")
   localStorage.removeItem("adminAccount")
   localStorage.removeItem("adminName")
+  localStorage.removeItem("adminAvatarUrl")
 }
 
 const handleCommand = async (command) => {

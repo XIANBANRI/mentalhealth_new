@@ -1,7 +1,10 @@
 package com.sl.mentalhealth.controller;
 
+import com.sl.mentalhealth.config.LoginUser;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.dto.AssessmentSubmitRequest;
 import com.sl.mentalhealth.service.AssessmentGatewayService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +25,11 @@ class StudentAssessmentControllerTest {
 
   @InjectMocks
   private StudentAssessmentController controller;
+
+  @AfterEach
+  void tearDown() {
+    UserContext.clear();
+  }
 
   @Test
   void listScales_success() {
@@ -79,6 +87,8 @@ class StudentAssessmentControllerTest {
 
   @Test
   void submit_success() {
+    UserContext.set(new LoginUser("s001", "student"));
+
     AssessmentSubmitRequest request = mock(AssessmentSubmitRequest.class);
 
     ResponseEntity<Map<String, Object>> response = controller.submit(request);
@@ -89,13 +99,16 @@ class StudentAssessmentControllerTest {
     assertEquals("提交成功", response.getBody().get("message"));
     assertTrue(response.getBody().containsKey("data"));
 
+    verify(request).setStudentId("s001");
     verify(assessmentGatewayService).submit(request);
   }
 
   @Test
   void submit_whenException_shouldReturnBadRequest() {
+    UserContext.set(new LoginUser("s001", "student"));
+
     AssessmentSubmitRequest request = mock(AssessmentSubmitRequest.class);
-    when(assessmentGatewayService.submit(request)).thenThrow(new RuntimeException("提交失败"));
+    doThrow(new RuntimeException("提交失败")).when(request).setStudentId("s001");
 
     ResponseEntity<Map<String, Object>> response = controller.submit(request);
 
@@ -104,12 +117,15 @@ class StudentAssessmentControllerTest {
     assertEquals(false, response.getBody().get("success"));
     assertEquals("提交失败", response.getBody().get("message"));
 
-    verify(assessmentGatewayService).submit(request);
+    verify(request).setStudentId("s001");
+    verify(assessmentGatewayService, never()).submit(request);
   }
 
   @Test
   void getRecords_success() {
-    ResponseEntity<Map<String, Object>> response = controller.getRecords("s001");
+    UserContext.set(new LoginUser("s001", "student"));
+
+    ResponseEntity<Map<String, Object>> response = controller.getRecords();
 
     assertEquals(200, response.getStatusCode().value());
     assertNotNull(response.getBody());
@@ -122,9 +138,10 @@ class StudentAssessmentControllerTest {
 
   @Test
   void getRecords_whenException_shouldReturnBadRequest() {
+    UserContext.set(new LoginUser("s001", "student"));
     when(assessmentGatewayService.getRecords("s001")).thenThrow(new RuntimeException("记录查询失败"));
 
-    ResponseEntity<Map<String, Object>> response = controller.getRecords("s001");
+    ResponseEntity<Map<String, Object>> response = controller.getRecords();
 
     assertEquals(400, response.getStatusCode().value());
     assertNotNull(response.getBody());

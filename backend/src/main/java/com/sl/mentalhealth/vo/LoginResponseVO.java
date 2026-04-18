@@ -5,14 +5,16 @@ public class LoginResponseVO {
   private String role;
   private String username;
   private String redirectPath;
+  private String token;
 
   public LoginResponseVO() {
   }
 
-  public LoginResponseVO(String role, String username, String redirectPath) {
+  public LoginResponseVO(String role, String username, String redirectPath, String token) {
     this.role = role;
     this.username = username;
     this.redirectPath = redirectPath;
+    this.token = token;
   }
 
   public String getRole() {
@@ -37,5 +39,13 @@ public class LoginResponseVO {
 
   public void setRedirectPath(String redirectPath) {
     this.redirectPath = redirectPath;
+  }
+
+  public String getToken() {
+    return token;
+  }
+
+  public void setToken(String token) {
+    this.token = token;
   }
 }

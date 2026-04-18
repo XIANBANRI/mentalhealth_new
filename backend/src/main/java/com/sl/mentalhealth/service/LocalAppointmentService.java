@@ -59,12 +59,7 @@ public class LocalAppointmentService {
       }
     }
 
-    Map<String, Teacher> teacherMap = new HashMap<>();
-    if (!teacherAccounts.isEmpty()) {
-      for (Teacher teacher : teacherMapper.selectBatchIds(teacherAccounts)) {
-        teacherMap.put(teacher.getAccount(), teacher);
-      }
-    }
+    Map<String, Teacher> teacherMap = buildTeacherMap(teacherAccounts);
 
     List<AvailableAppointmentVO> result = new ArrayList<>();
     for (TeacherSchedule schedule : schedules) {
@@ -75,20 +70,7 @@ public class LocalAppointmentService {
           .eq(Appointment::getAppointmentDate, date)
           .in(Appointment::getStatus, OCCUPIED_STATUS));
 
-      AvailableAppointmentVO vo = new AvailableAppointmentVO();
-      vo.setScheduleId(schedule.getId());
-      vo.setTeacherAccount(schedule.getTeacherAccount());
-      vo.setTeacherName(teacher == null ? null : teacher.getTeacherName());
-      vo.setOfficeLocation(teacher == null ? null : teacher.getOfficeLocation());
-      vo.setPhone(teacher == null ? null : teacher.getPhone());
-      vo.setWeekDay(schedule.getWeekDay());
-      vo.setStartTime(schedule.getStartTime() == null ? null : schedule.getStartTime().toString());
-      vo.setEndTime(schedule.getEndTime() == null ? null : schedule.getEndTime().toString());
-      vo.setMaxAppointments(schedule.getMaxAppointments());
-      vo.setUsedAppointments((int) used);
-      vo.setRemainingAppointments(Math.max(schedule.getMaxAppointments() - (int) used, 0));
-      vo.setRemark(schedule.getRemark());
-      result.add(vo);
+      result.add(buildAvailableAppointmentVO(schedule, teacher, used));
     }
 
     return result;
@@ -313,6 +295,27 @@ public class LocalAppointmentService {
     appointmentMapper.updateById(appointment);
   }
 
+  private AvailableAppointmentVO buildAvailableAppointmentVO(
+      TeacherSchedule schedule,
+      Teacher teacher,
+      long used
+  ) {
+    AvailableAppointmentVO vo = new AvailableAppointmentVO();
+    vo.setScheduleId(schedule.getId());
+    vo.setTeacherAccount(schedule.getTeacherAccount());
+    vo.setTeacherName(teacher == null ? null : teacher.getTeacherName());
+    vo.setOfficeLocation(teacher == null ? null : teacher.getOfficeLocation());
+    vo.setPhone(teacher == null ? null : teacher.getPhone());
+    vo.setWeekDay(schedule.getWeekDay());
+    vo.setStartTime(schedule.getStartTime() == null ? null : schedule.getStartTime().toString());
+    vo.setEndTime(schedule.getEndTime() == null ? null : schedule.getEndTime().toString());
+    vo.setMaxAppointments(schedule.getMaxAppointments());
+    vo.setUsedAppointments((int) used);
+    vo.setRemainingAppointments(Math.max(schedule.getMaxAppointments() - (int) used, 0));
+    vo.setRemark(schedule.getRemark());
+    return vo;
+  }
+
   private List<AppointmentVO> buildAppointmentVOList(List<Appointment> appointments) {
     if (appointments == null || appointments.isEmpty()) {
       return Collections.emptyList();
@@ -330,19 +333,8 @@ public class LocalAppointmentService {
       }
     }
 
-    Map<String, Teacher> teacherMap = new HashMap<>();
-    if (!teacherAccounts.isEmpty()) {
-      for (Teacher teacher : teacherMapper.selectBatchIds(teacherAccounts)) {
-        teacherMap.put(teacher.getAccount(), teacher);
-      }
-    }
-
-    Map<String, Student> studentMap = new HashMap<>();
-    if (!studentAccounts.isEmpty()) {
-      for (Student student : studentMapper.selectBatchIds(studentAccounts)) {
-        studentMap.put(student.getStudentId(), student);
-      }
-    }
+    Map<String, Teacher> teacherMap = buildTeacherMap(teacherAccounts);
+    Map<String, Student> studentMap = buildStudentMap(studentAccounts);
 
     DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -385,6 +377,30 @@ public class LocalAppointmentService {
     }
 
     return result;
+  }
+
+  private Map<String, Teacher> buildTeacherMap(Set<String> teacherAccounts) {
+    Map<String, Teacher> teacherMap = new HashMap<>();
+    if (teacherAccounts == null || teacherAccounts.isEmpty()) {
+      return teacherMap;
+    }
+
+    for (Teacher teacher : teacherMapper.selectByIds(teacherAccounts)) {
+      teacherMap.put(teacher.getAccount(), teacher);
+    }
+    return teacherMap;
+  }
+
+  private Map<String, Student> buildStudentMap(Set<String> studentAccounts) {
+    Map<String, Student> studentMap = new HashMap<>();
+    if (studentAccounts == null || studentAccounts.isEmpty()) {
+      return studentMap;
+    }
+
+    for (Student student : studentMapper.selectByIds(studentAccounts)) {
+      studentMap.put(student.getStudentId(), student);
+    }
+    return studentMap;
   }
 
   private int convertWeekDay(DayOfWeek dayOfWeek) {

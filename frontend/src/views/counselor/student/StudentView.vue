@@ -199,51 +199,9 @@ const pagedAssessmentSummaries = computed(() => {
   return list.slice(start, end)
 })
 
-function getCounselorAccount() {
-  const storageKeys = [
-    "userInfo",
-    "loginUser",
-    "counselorInfo",
-    "user",
-    "account"
-  ]
-
-  for (const key of storageKeys) {
-    const localVal = localStorage.getItem(key)
-    const sessionVal = sessionStorage.getItem(key)
-    const raw = localVal || sessionVal
-
-    if (!raw) continue
-
-    if (key === "account") {
-      return raw
-    }
-
-    try {
-      const parsed = JSON.parse(raw)
-      if (parsed?.counselorAccount) return parsed.counselorAccount
-      if (parsed?.account) return parsed.account
-      if (parsed?.username) return parsed.username
-      if (parsed?.userAccount) return parsed.userAccount
-    } catch {
-      if (raw) return raw
-    }
-  }
-
-  return ""
-}
-
 async function loadClassOptions() {
-  const counselorAccount = getCounselorAccount()
-  if (!counselorAccount) {
-    ElMessage.error("未获取到辅导员账号，请重新登录")
-    return false
-  }
-
   try {
-    const res = await request.get("/counselor/student/classes", {
-      params: { counselorAccount }
-    })
+    const res = await request.get("/api/counselor/student/classes")
 
     if (res.code === 200) {
       const actualClassList = res.data || []
@@ -263,22 +221,15 @@ async function loadClassOptions() {
       return false
     }
   } catch (error) {
-    ElMessage.error(error?.message || "查询班级列表失败")
+    ElMessage.error(error?.response?.data?.message || error?.message || "查询班级列表失败")
     return false
   }
 }
 
 async function loadStudentList() {
-  const counselorAccount = getCounselorAccount()
-  if (!counselorAccount) {
-    ElMessage.error("未获取到辅导员账号，请重新登录")
-    return
-  }
-
   tableLoading.value = true
   try {
-    const res = await request.post("/counselor/student/list", {
-      counselorAccount,
+    const res = await request.post("/api/counselor/student/list", {
       className: selectedClass.value,
       keyword: keyword.value.trim(),
       pageNum: pageNum.value,
@@ -292,28 +243,21 @@ async function loadStudentList() {
       ElMessage.error(res.message || "查询学生列表失败")
     }
   } catch (error) {
-    ElMessage.error(error?.message || "查询学生列表失败")
+    ElMessage.error(error?.response?.data?.message || error?.message || "查询学生列表失败")
   } finally {
     tableLoading.value = false
   }
 }
 
 async function handleViewDetail(row) {
-  const counselorAccount = getCounselorAccount()
-  if (!counselorAccount) {
-    ElMessage.error("未获取到辅导员账号，请重新登录")
-    return
-  }
-
   detailDialogVisible.value = true
   detailLoading.value = true
   studentDetail.value = null
   assessmentPageNum.value = 1
 
   try {
-    const res = await request.get("/counselor/student/detail", {
+    const res = await request.get("/api/counselor/student/detail", {
       params: {
-        counselorAccount,
         studentId: row.studentId
       }
     })
@@ -325,7 +269,7 @@ async function handleViewDetail(row) {
       detailDialogVisible.value = false
     }
   } catch (error) {
-    ElMessage.error(error?.message || "查询学生详情失败")
+    ElMessage.error(error?.response?.data?.message || error?.message || "查询学生详情失败")
     detailDialogVisible.value = false
   } finally {
     detailLoading.value = false

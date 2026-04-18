@@ -1,11 +1,13 @@
 package com.sl.mentalhealth.controller;
 
 import com.sl.mentalhealth.common.Result;
-import com.sl.mentalhealth.dto.TeacherProfileRequest;
+import com.sl.mentalhealth.config.LoginUser;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.kafka.message.TeacherProfileResponseMessage;
 import com.sl.mentalhealth.service.AvatarStorageService;
 import com.sl.mentalhealth.service.TeacherProfileGatewayService;
 import com.sl.mentalhealth.vo.TeacherProfileResponseVO;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,21 +31,16 @@ class TeacherProfileControllerTest {
   @InjectMocks
   private TeacherProfileController controller;
 
-  @Test
-  void getTeacherProfile_whenRequestNull_shouldReturnBadRequest() {
-    Result<?> result = controller.getTeacherProfile(null);
-
-    assertEquals(400, result.getCode());
-    assertEquals("老师账号不能为空", result.getMessage());
-    assertNull(result.getData());
+  @AfterEach
+  void tearDown() {
+    UserContext.clear();
   }
 
   @Test
   void getTeacherProfile_whenAccountBlank_shouldReturnBadRequest() {
-    TeacherProfileRequest request = mock(TeacherProfileRequest.class);
-    when(request.getTeacherAccount()).thenReturn("   ");
+    UserContext.set(new LoginUser("   ", "teacher"));
 
-    Result<?> result = controller.getTeacherProfile(request);
+    Result<?> result = controller.getTeacherProfile();
 
     assertEquals(400, result.getCode());
     assertEquals("老师账号不能为空", result.getMessage());
@@ -52,17 +49,17 @@ class TeacherProfileControllerTest {
 
   @Test
   void getTeacherProfile_success() {
-    TeacherProfileRequest request = mock(TeacherProfileRequest.class);
+    UserContext.set(new LoginUser("t001", "teacher"));
+
     TeacherProfileResponseMessage response = mock(TeacherProfileResponseMessage.class);
     TeacherProfileResponseVO vo = mock(TeacherProfileResponseVO.class);
 
-    when(request.getTeacherAccount()).thenReturn("t001");
     when(response.isSuccess()).thenReturn(true);
     when(response.getMessage()).thenReturn("查询成功");
     when(response.getData()).thenReturn(vo);
     when(teacherProfileGatewayService.getTeacherProfile("t001")).thenReturn(response);
 
-    Result<?> result = controller.getTeacherProfile(request);
+    Result<?> result = controller.getTeacherProfile();
 
     assertEquals(200, result.getCode());
     assertEquals("查询成功", result.getMessage());
@@ -71,10 +68,12 @@ class TeacherProfileControllerTest {
 
   @Test
   void uploadAvatar_whenTeacherAccountBlank_shouldReturnBadRequest() {
+    UserContext.set(new LoginUser("   ", "teacher"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1});
 
-    Result<?> result = controller.uploadAvatar("   ", file);
+    Result<?> result = controller.uploadAvatar(file);
 
     assertEquals(400, result.getCode());
     assertEquals("老师账号不能为空", result.getMessage());
@@ -83,6 +82,8 @@ class TeacherProfileControllerTest {
 
   @Test
   void uploadAvatar_whenOldProfileQueryFailed_shouldReturnError() {
+    UserContext.set(new LoginUser("t001", "teacher"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1});
 
@@ -91,7 +92,7 @@ class TeacherProfileControllerTest {
     when(oldResponse.getMessage()).thenReturn("查询旧头像失败");
     when(teacherProfileGatewayService.getTeacherProfile("t001")).thenReturn(oldResponse);
 
-    Result<?> result = controller.uploadAvatar("t001", file);
+    Result<?> result = controller.uploadAvatar(file);
 
     assertEquals(500, result.getCode());
     assertEquals("查询旧头像失败", result.getMessage());
@@ -102,6 +103,8 @@ class TeacherProfileControllerTest {
 
   @Test
   void uploadAvatar_success_shouldDeleteOldAvatar() {
+    UserContext.set(new LoginUser("t001", "teacher"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1, 2, 3});
 
@@ -126,7 +129,7 @@ class TeacherProfileControllerTest {
     when(teacherProfileGatewayService.updateAvatar("t001", "/avatar/teacher/new.png"))
         .thenReturn(updateResponse);
 
-    Result<?> result = controller.uploadAvatar("t001", file);
+    Result<?> result = controller.uploadAvatar(file);
 
     assertEquals(200, result.getCode());
     assertEquals("头像上传成功", result.getMessage());
@@ -137,6 +140,8 @@ class TeacherProfileControllerTest {
 
   @Test
   void uploadAvatar_whenUpdateResponseFailed_shouldRollbackNewAvatar() {
+    UserContext.set(new LoginUser("t001", "teacher"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1, 2, 3});
 
@@ -159,7 +164,7 @@ class TeacherProfileControllerTest {
     when(teacherProfileGatewayService.updateAvatar("t001", "/avatar/teacher/new.png"))
         .thenReturn(updateResponse);
 
-    Result<?> result = controller.uploadAvatar("t001", file);
+    Result<?> result = controller.uploadAvatar(file);
 
     assertEquals(500, result.getCode());
     assertEquals("数据库更新失败", result.getMessage());
@@ -170,6 +175,8 @@ class TeacherProfileControllerTest {
 
   @Test
   void uploadAvatar_whenException_shouldRollbackNewAvatar() {
+    UserContext.set(new LoginUser("t001", "teacher"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1, 2, 3});
 
@@ -188,7 +195,7 @@ class TeacherProfileControllerTest {
     when(teacherProfileGatewayService.updateAvatar("t001", "/avatar/teacher/new.png"))
         .thenThrow(new RuntimeException("更新异常"));
 
-    Result<?> result = controller.uploadAvatar("t001", file);
+    Result<?> result = controller.uploadAvatar(file);
 
     assertEquals(500, result.getCode());
     assertEquals("更新异常", result.getMessage());

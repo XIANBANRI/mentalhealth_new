@@ -424,7 +424,7 @@ const importForm = reactive({
   scaleName: '',
   scaleType: '',
   description: '',
-  operator: 'admin',
+  operator: '',
   questionFile: null,
   ruleFile: null
 })
@@ -450,7 +450,7 @@ const editForm = reactive({
   scaleType: '',
   description: '',
   versionRemark: '',
-  operator: 'admin',
+  operator: '',
   questions: [],
   rules: []
 })
@@ -538,7 +538,7 @@ function refreshQuestionNumbers() {
 function loadScaleList() {
   listLoading.value = true
   request
-  .get('/admin/assessment-scale/list')
+  .get('/api/admin/assessment-scale/list')
   .then((res) => {
     if (res?.code === 200) {
       scaleList.value = res.data || []
@@ -559,7 +559,7 @@ function resetImportForm() {
   importForm.scaleName = ''
   importForm.scaleType = ''
   importForm.description = ''
-  importForm.operator = 'admin'
+  importForm.operator = ''
   importForm.questionFile = null
   importForm.ruleFile = null
   questionFileList.value = []
@@ -606,13 +606,15 @@ function submitImport() {
     formData.append('scaleName', importForm.scaleName)
     formData.append('scaleType', importForm.scaleType)
     formData.append('description', importForm.description || '')
-    formData.append('operator', importForm.operator || 'admin')
+    if (importForm.operator && importForm.operator.trim() !== '') {
+      formData.append('operator', importForm.operator.trim())
+    }
     formData.append('questionFile', importForm.questionFile)
     formData.append('ruleFile', importForm.ruleFile)
 
     importLoading.value = true
     request
-    .post('/admin/assessment-scale/import', formData, {
+    .post('/api/admin/assessment-scale/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     .then((res) => {
@@ -639,7 +641,7 @@ async function viewDetail(row) {
   resetDetailData()
 
   try {
-    const res = await request.get(`/admin/assessment-scale/detail/${row.scaleId}`)
+    const res = await request.get(`/api/admin/assessment-scale/detail/${row.scaleId}`)
     if (res?.code === 200 && res.data) {
       detailData.scale = res.data.scale || null
       detailData.version = res.data.version || null
@@ -664,7 +666,7 @@ function openEditDialog(row) {
   editQuestionPage.value = 1
 
   request
-  .get(`/admin/assessment-scale/detail/${row.scaleId}`)
+  .get(`/api/admin/assessment-scale/detail/${row.scaleId}`)
   .then((res) => {
     if (res?.code === 200 && res.data) {
       const data = res.data
@@ -673,7 +675,7 @@ function openEditDialog(row) {
       editForm.scaleType = data.scale?.scaleType || ''
       editForm.description = data.scale?.description || ''
       editForm.versionRemark = ''
-      editForm.operator = 'admin'
+      editForm.operator = ''
 
       editForm.questions = (data.questions || []).map((q, idx) => ({
         questionNo: idx + 1,
@@ -834,13 +836,15 @@ function submitUpdate() {
 
   updateLoading.value = true
   request
-  .post('/admin/assessment-scale/update', {
+  .post('/api/admin/assessment-scale/update', {
     scaleId: editForm.scaleId,
     scaleName: editForm.scaleName,
     scaleType: editForm.scaleType,
     description: editForm.description,
     versionRemark: editForm.versionRemark || '管理员修改版本',
-    operator: editForm.operator || 'admin',
+    ...(editForm.operator && editForm.operator.trim() !== ''
+        ? { operator: editForm.operator.trim() }
+        : {}),
     questions: editForm.questions,
     rules: editForm.rules
   })
@@ -865,7 +869,7 @@ function handleEnable(row) {
   ElMessageBox.confirm(`确认启用量表【${row.scaleName}】吗？`, '提示', {
     type: 'warning'
   })
-  .then(() => request.post(`/admin/assessment-scale/enable/${row.scaleId}`))
+  .then(() => request.post(`/api/admin/assessment-scale/enable/${row.scaleId}`))
   .then((res) => {
     if (res?.code === 200) {
       ElMessage.success(res?.message || '启用成功')
@@ -881,7 +885,7 @@ function handleDisable(row) {
   ElMessageBox.confirm(`确认停用量表【${row.scaleName}】吗？`, '提示', {
     type: 'warning'
   })
-  .then(() => request.post(`/admin/assessment-scale/disable/${row.scaleId}`))
+  .then(() => request.post(`/api/admin/assessment-scale/disable/${row.scaleId}`))
   .then((res) => {
     if (res?.code === 200) {
       ElMessage.success(res?.message || '停用成功')
@@ -895,7 +899,7 @@ function handleDisable(row) {
 
 function handleDelete(row) {
   request
-  .post(`/admin/assessment-scale/delete/${row.scaleId}`)
+  .post(`/api/admin/assessment-scale/delete/${row.scaleId}`)
   .then((res) => {
     if (res?.code === 200) {
       ElMessage.success(res?.message || '删除成功')

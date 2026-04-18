@@ -1,6 +1,7 @@
 package com.sl.mentalhealth.controller;
 
 import com.sl.mentalhealth.common.Result;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.dto.TeacherAppointmentQueryRequest;
 import com.sl.mentalhealth.dto.TeacherAppointmentUpdateStatusRequest;
 import com.sl.mentalhealth.dto.TeacherAssessmentRecordQueryRequest;
@@ -12,13 +13,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/teacher/appointment")
 @RequiredArgsConstructor
-@CrossOrigin
 public class TeacherAppointmentController {
 
   private final TeacherAppointmentGatewayService teacherAppointmentGatewayService;
 
   @PostMapping("/query")
   public Result<?> query(@RequestBody TeacherAppointmentQueryRequest request) {
+    request.setTeacherAccount(UserContext.getUsername());
     TeacherAppointmentResponseMessage response = teacherAppointmentGatewayService.query(request);
     if (response.isSuccess()) {
       return Result.success(response.getMessage(), response.getAppointmentList());
@@ -28,6 +29,7 @@ public class TeacherAppointmentController {
 
   @PostMapping("/record")
   public Result<?> record(@RequestBody TeacherAppointmentQueryRequest request) {
+    request.setTeacherAccount(UserContext.getUsername());
     TeacherAppointmentResponseMessage response = teacherAppointmentGatewayService.record(request);
     if (response.isSuccess()) {
       return Result.success(response.getMessage(), response.getAppointmentList());
@@ -37,6 +39,7 @@ public class TeacherAppointmentController {
 
   @PostMapping("/updateStatus")
   public Result<?> updateStatus(@RequestBody TeacherAppointmentUpdateStatusRequest request) {
+    request.setTeacherAccount(UserContext.getUsername());
     TeacherAppointmentResponseMessage response = teacherAppointmentGatewayService.updateStatus(request);
     if (response.isSuccess()) {
       return Result.success(response.getMessage(), response.getAppointmentData());
@@ -46,6 +49,7 @@ public class TeacherAppointmentController {
 
   @PostMapping("/assessmentRecord")
   public Result<?> assessmentRecord(@RequestBody TeacherAssessmentRecordQueryRequest request) {
+    request.setTeacherAccount(UserContext.getUsername());
     TeacherAppointmentResponseMessage response = teacherAppointmentGatewayService.assessmentRecord(request);
     if (response.isSuccess()) {
       return Result.success(response.getMessage(), response.getAssessmentRecordList());

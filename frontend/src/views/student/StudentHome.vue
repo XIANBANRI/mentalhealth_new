@@ -102,7 +102,7 @@ const router = useRouter()
 const route = useRoute()
 
 const student = reactive({
-  studentId: localStorage.getItem("studentId") || "",
+  studentId: localStorage.getItem("studentId") || localStorage.getItem("username") || "",
   name: localStorage.getItem("studentName") || "",
   className: localStorage.getItem("className") || "",
   college: localStorage.getItem("college") || "",
@@ -115,18 +115,20 @@ const clearLoginCache = () => {
   localStorage.removeItem("token")
   localStorage.removeItem("role")
   localStorage.removeItem("username")
+  localStorage.removeItem("redirectPath")
   localStorage.removeItem("userInfo")
 
   localStorage.removeItem("studentId")
   localStorage.removeItem("studentName")
   localStorage.removeItem("className")
   localStorage.removeItem("college")
+  localStorage.removeItem("grade")
   localStorage.removeItem("phone")
 }
 
 const loadStudentProfile = async () => {
   const role = localStorage.getItem("role")
-  const studentId = localStorage.getItem("studentId")
+  const studentId = localStorage.getItem("studentId") || localStorage.getItem("username")
 
   if (role !== "student") {
     ElMessage.error("当前登录身份不是学生")
@@ -141,20 +143,18 @@ const loadStudentProfile = async () => {
   }
 
   try {
-    const result = await request.post("/api/student/profile", {
-      studentId
-    })
+    const result = await request.get("/api/student/profile")
 
     if (result?.success) {
       const data = result.data || {}
 
-      student.studentId = data.studentId || ""
+      student.studentId = data.studentId || studentId
       student.name = data.name || ""
       student.className = data.className || ""
       student.college = data.college || ""
       student.phone = data.phone || ""
 
-      localStorage.setItem("studentId", data.studentId || "")
+      localStorage.setItem("studentId", student.studentId || "")
       localStorage.setItem("studentName", data.name || "")
       localStorage.setItem("className", data.className || "")
       localStorage.setItem("college", data.college || "")

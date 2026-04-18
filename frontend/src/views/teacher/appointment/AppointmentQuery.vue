@@ -49,7 +49,11 @@
           empty-text="暂无预约数据"
       >
         <el-table-column prop="appointmentNo" label="预约编号" min-width="160" />
-        <el-table-column prop="studentId" label="学生学号" width="120" />
+        <el-table-column label="学生学号" width="120">
+          <template #default="scope">
+            {{ scope.row.studentId || scope.row.studentAccount || "-" }}
+          </template>
+        </el-table-column>
         <el-table-column prop="studentName" label="学生姓名" width="100" />
         <el-table-column prop="appointmentDate" label="预约日期" width="120" />
         <el-table-column prop="startTime" label="开始时间" width="90" />
@@ -59,7 +63,7 @@
 
         <el-table-column label="会诊记录" min-width="180" show-overflow-tooltip>
           <template #default="scope">
-            {{ scope.row.offlineRecord || "暂无" }}
+            {{ scope.row.offlineRecord || scope.row.teacherReply || "暂无" }}
           </template>
         </el-table-column>
 
@@ -196,7 +200,7 @@
         destroy-on-close
     >
       <div class="student-info" v-if="assessmentRecords.length > 0">
-        <span>学号：{{ assessmentRecords[0].studentId }}</span>
+        <span>学号：{{ assessmentRecords[0].studentId || assessmentRecords[0].studentAccount }}</span>
         <span>姓名：{{ assessmentRecords[0].studentName }}</span>
         <span>学院：{{ assessmentRecords[0].college || "暂无" }}</span>
         <span>班级：{{ assessmentRecords[0].className || "暂无" }}</span>
@@ -289,10 +293,6 @@ const rejectForm = reactive({
   rejectReason: ""
 })
 
-const teacherAccount = computed(() => {
-  return localStorage.getItem("teacherAccount") || localStorage.getItem("username") || ""
-})
-
 const recordDialogTitle = computed(() => {
   return recordForm.offlineRecord ? "修改会诊记录" : "填写会诊记录"
 })
@@ -346,15 +346,9 @@ const getResultLevelTag = (level) => {
 }
 
 const loadAppointmentList = async () => {
-  if (!teacherAccount.value) {
-    ElMessage.error("未获取到老师账号")
-    return
-  }
-
   loading.value = true
   try {
     const result = await request.post("/api/teacher/appointment/query", {
-      teacherAccount: teacherAccount.value,
       studentId: queryForm.studentId,
       appointmentDate: queryForm.appointmentDate,
       status: queryForm.status
@@ -391,7 +385,6 @@ const approveAppointment = async (row) => {
 
     const result = await request.post("/api/teacher/appointment/updateStatus", {
       id: row.id,
-      teacherAccount: teacherAccount.value,
       status: "APPROVED",
       offlineRecord: "",
       rejectReason: ""
@@ -412,7 +405,7 @@ const approveAppointment = async (row) => {
 
 const openRejectDialog = (row) => {
   rejectForm.id = row.id
-  rejectForm.studentId = row.studentId || ""
+  rejectForm.studentId = row.studentId || row.studentAccount || ""
   rejectForm.studentName = row.studentName || ""
   rejectForm.rejectReason = row.rejectReason || ""
   rejectDialogVisible.value = true
@@ -431,7 +424,6 @@ const submitReject = async () => {
   try {
     const result = await request.post("/api/teacher/appointment/updateStatus", {
       id: rejectForm.id,
-      teacherAccount: teacherAccount.value,
       status: "REJECTED",
       offlineRecord: "",
       rejectReason: rejectForm.rejectReason.trim()
@@ -456,9 +448,9 @@ const openRecordDialog = (row) => {
   }
 
   recordForm.id = row.id
-  recordForm.studentId = row.studentId || ""
+  recordForm.studentId = row.studentId || row.studentAccount || ""
   recordForm.studentName = row.studentName || ""
-  recordForm.offlineRecord = row.offlineRecord || ""
+  recordForm.offlineRecord = row.offlineRecord || row.teacherReply || ""
   recordDialogVisible.value = true
 }
 
@@ -476,7 +468,6 @@ const saveRecord = async () => {
   try {
     const result = await request.post("/api/teacher/appointment/updateStatus", {
       id: recordForm.id,
-      teacherAccount: teacherAccount.value,
       status: "APPROVED",
       offlineRecord: recordForm.offlineRecord.trim(),
       rejectReason: ""
@@ -495,7 +486,7 @@ const saveRecord = async () => {
 }
 
 const completeRecord = async (row) => {
-  const offlineRecord = row.offlineRecord || ""
+  const offlineRecord = row.offlineRecord || row.teacherReply || ""
 
   if (!String(offlineRecord).trim()) {
     ElMessage.warning("请先点击“记录”填写会诊记录，再点击完成")
@@ -511,7 +502,6 @@ const completeRecord = async (row) => {
 
     const result = await request.post("/api/teacher/appointment/updateStatus", {
       id: row.id,
-      teacherAccount: teacherAccount.value,
       status: "COMPLETED",
       offlineRecord: offlineRecord.trim(),
       rejectReason: ""
@@ -537,8 +527,7 @@ const loadAssessmentRecord = async (row) => {
 
   try {
     const result = await request.post("/api/teacher/appointment/assessmentRecord", {
-      teacherAccount: teacherAccount.value,
-      studentId: row.studentId
+      studentId: row.studentId || row.studentAccount
     })
 
     if (result?.code === 200 || result?.success === true) {

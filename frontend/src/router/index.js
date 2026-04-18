@@ -37,144 +37,172 @@ const routes = [
   {
     path: "/",
     name: "Login",
-    component: LoginPage
+    component: LoginPage,
+    meta: { guestOnly: true }
   },
   {
     path: "/forget",
     name: "ForgetPassword",
-    component: ForgetPassword
+    component: ForgetPassword,
+    meta: { guestOnly: true }
   },
   {
     path: "/student",
     component: StudentHome,
+    meta: { requiresAuth: true, role: "student" },
     children: [
       {
         path: "",
         name: "StudentWelcome",
-        component: StudentWelcome
+        component: StudentWelcome,
+        meta: { requiresAuth: true, role: "student" }
       },
       {
         path: "assessment/test",
         name: "PsychologyTest",
-        component: PsychologyTest
+        component: PsychologyTest,
+        meta: { requiresAuth: true, role: "student" }
       },
       {
         path: "assessment/record",
         name: "TestRecord",
-        component: TestRecord
+        component: TestRecord,
+        meta: { requiresAuth: true, role: "student" }
       },
       {
         path: "appointment/apply",
         name: "AppointmentApply",
-        component: AppointmentApply
+        component: AppointmentApply,
+        meta: { requiresAuth: true, role: "student" }
       },
       {
         path: "appointment/record",
         name: "AppointmentRecord",
-        component: AppointmentRecord
+        component: AppointmentRecord,
+        meta: { requiresAuth: true, role: "student" }
       },
       {
         path: "profile",
         name: "StudentProfile",
-        component: StudentProfile
+        component: StudentProfile,
+        meta: { requiresAuth: true, role: "student" }
       }
     ]
   },
   {
     path: "/teacher",
     component: TeacherHome,
+    meta: { requiresAuth: true, role: "teacher" },
     children: [
       {
         path: "",
         name: "TeacherWelcome",
-        component: TeacherWelcome
+        component: TeacherWelcome,
+        meta: { requiresAuth: true, role: "teacher" }
       },
       {
         path: "schedule/query",
         name: "ScheduleQuery",
-        component: ScheduleQuery
+        component: ScheduleQuery,
+        meta: { requiresAuth: true, role: "teacher" }
       },
       {
         path: "schedule/manage",
         name: "ScheduleManage",
-        component: ScheduleManage
+        component: ScheduleManage,
+        meta: { requiresAuth: true, role: "teacher" }
       },
       {
         path: "appointment/query",
         name: "TeacherAppointmentQuery",
-        component: TeacherAppointmentQuery
+        component: TeacherAppointmentQuery,
+        meta: { requiresAuth: true, role: "teacher" }
       },
       {
         path: "appointment/record",
         name: "TeacherAppointmentRecord",
-        component: TeacherAppointmentRecord
+        component: TeacherAppointmentRecord,
+        meta: { requiresAuth: true, role: "teacher" }
       },
       {
         path: "profile",
         name: "TeacherProfile",
-        component: TeacherProfile
+        component: TeacherProfile,
+        meta: { requiresAuth: true, role: "teacher" }
       }
     ]
   },
   {
     path: "/counselor",
     component: CounselorHome,
+    meta: { requiresAuth: true, role: "counselor" },
     children: [
       {
         path: "",
         name: "CounselorWelcome",
-        component: CounselorWelcome
+        component: CounselorWelcome,
+        meta: { requiresAuth: true, role: "counselor" }
       },
       {
         path: "student/view",
         name: "CounselorStudentView",
-        component: CounselorStudentView
+        component: CounselorStudentView,
+        meta: { requiresAuth: true, role: "counselor" }
       },
       {
         path: "student/warning",
         name: "CounselorStudentWarning",
-        component: CounselorStudentWarning
+        component: CounselorStudentWarning,
+        meta: { requiresAuth: true, role: "counselor" }
       },
       {
         path: "report",
         name: "CounselorTrendReport",
-        component: CounselorTrendReport
+        component: CounselorTrendReport,
+        meta: { requiresAuth: true, role: "counselor" }
       },
       {
         path: "profile",
         name: "CounselorProfile",
-        component: CounselorProfile
+        component: CounselorProfile,
+        meta: { requiresAuth: true, role: "counselor" }
       }
     ]
   },
   {
     path: "/admin",
     component: AdminHome,
+    meta: { requiresAuth: true, role: "admin" },
     children: [
       {
         path: "",
         name: "AdminWelcome",
-        component: AdminWelcome
+        component: AdminWelcome,
+        meta: { requiresAuth: true, role: "admin" }
       },
       {
         path: "management/counselor",
         name: "CounselorManage",
-        component: CounselorManage
+        component: CounselorManage,
+        meta: { requiresAuth: true, role: "admin" }
       },
       {
         path: "management/teacher",
         name: "AdminTeacherManage",
-        component: TeacherManage
+        component: TeacherManage,
+        meta: { requiresAuth: true, role: "admin" }
       },
       {
         path: "test/input",
         name: "TestInput",
-        component: TestInput
+        component: TestInput,
+        meta: { requiresAuth: true, role: "admin" }
       },
       {
         path: "profile",
         name: "AdminProfile",
-        component: AdminProfile
+        component: AdminProfile,
+        meta: { requiresAuth: true, role: "admin" }
       }
     ]
   }
@@ -183,6 +211,47 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+function getHomePathByRole(role) {
+  switch (role) {
+    case "student":
+      return "/student"
+    case "teacher":
+      return "/teacher"
+    case "counselor":
+      return "/counselor"
+    case "admin":
+      return "/admin"
+    default:
+      return "/"
+  }
+}
+
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem("token")
+  const role = localStorage.getItem("role")
+
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const guestOnly = to.matched.some(record => record.meta.guestOnly)
+
+  if (requiresAuth && !token) {
+    return next("/")
+  }
+
+  if (guestOnly && token) {
+    return next(getHomePathByRole(role))
+  }
+
+  const targetRoleRecord = [...to.matched].reverse().find(record => record.meta.role)
+  const targetRole = targetRoleRecord?.meta?.role
+
+  if (targetRole && role && targetRole !== role) {
+    alert("无权限访问该页面")
+    return next(getHomePathByRole(role))
+  }
+
+  next()
 })
 
 export default router

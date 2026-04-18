@@ -1,5 +1,6 @@
 package com.sl.mentalhealth.controller;
 
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.dto.StudentProfileRequest;
 import com.sl.mentalhealth.service.AvatarStorageService;
 import com.sl.mentalhealth.service.StudentProfileGatewayService;
@@ -24,13 +25,15 @@ public class StudentProfileController {
     this.avatarStorageService = avatarStorageService;
   }
 
-  @PostMapping("/profile")
-  public ResponseEntity<Map<String, Object>> queryProfile(
-      @RequestBody StudentProfileRequest request) {
-
+  @GetMapping("/profile")
+  public ResponseEntity<Map<String, Object>> queryProfile() {
     Map<String, Object> result = new HashMap<>();
 
     try {
+      String studentId = UserContext.getUsername();
+      StudentProfileRequest request = new StudentProfileRequest();
+      request.setStudentId(studentId);
+
       StudentProfileResponseVO data = studentProfileGatewayService.queryProfile(request);
       result.put("success", true);
       result.put("message", "查询成功");
@@ -45,7 +48,6 @@ public class StudentProfileController {
 
   @PostMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Map<String, Object>> uploadAvatar(
-      @RequestParam("studentId") String studentId,
       @RequestParam("file") MultipartFile file) {
 
     Map<String, Object> result = new HashMap<>();
@@ -53,7 +55,8 @@ public class StudentProfileController {
     String oldAvatarUrl = null;
 
     try {
-      // 先查当前头像，记录旧头像地址
+      String studentId = UserContext.getUsername();
+
       StudentProfileRequest profileRequest = new StudentProfileRequest();
       profileRequest.setStudentId(studentId);
       StudentProfileResponseVO oldProfile = studentProfileGatewayService.queryProfile(profileRequest);
@@ -61,14 +64,11 @@ public class StudentProfileController {
         oldAvatarUrl = oldProfile.getAvatarUrl();
       }
 
-      // 保存新头像文件
       storageResult = avatarStorageService.saveStudentAvatar(studentId, file);
 
-      // 通过 Kafka 更新数据库里的 avatar_url
       StudentProfileResponseVO data = studentProfileGatewayService.updateAvatar(
           studentId, storageResult.getAvatarUrl());
 
-      // 数据库更新成功后，再删除旧头像
       if (oldAvatarUrl != null
           && !oldAvatarUrl.isBlank()
           && !oldAvatarUrl.equals(storageResult.getAvatarUrl())) {

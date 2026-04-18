@@ -307,7 +307,7 @@ export default {
       this.loading = true
       try {
         const res = await request({
-          url: '/admin/teacher/page',
+          url: '/api/admin/teacher/page',
           method: 'post',
           data: {
             pageNum: this.pagination.pageNum,
@@ -383,7 +383,7 @@ export default {
       if (!target) return false
 
       const res = await request({
-        url: '/admin/teacher/page',
+        url: '/api/admin/teacher/page',
         method: 'post',
         data: {
           pageNum: 1,
@@ -421,7 +421,7 @@ export default {
           }
 
           const res = await request({
-            url: '/admin/teacher/create',
+            url: '/api/admin/teacher/create',
             method: 'post',
             data: payload
           })
@@ -446,7 +446,7 @@ export default {
     async openEditDialog(account) {
       try {
         const res = await request({
-          url: '/admin/teacher/detail',
+          url: '/api/admin/teacher/detail',
           method: 'get',
           params: { account }
         })
@@ -491,7 +491,7 @@ export default {
           if (!payload.password) delete payload.password
 
           const res = await request({
-            url: '/admin/teacher/update',
+            url: '/api/admin/teacher/update',
             method: 'post',
             data: payload
           })

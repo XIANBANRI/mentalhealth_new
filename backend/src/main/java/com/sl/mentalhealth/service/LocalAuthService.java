@@ -1,5 +1,6 @@
 package com.sl.mentalhealth.service;
 
+import com.sl.mentalhealth.common.JwtUtil;
 import com.sl.mentalhealth.entity.Admin;
 import com.sl.mentalhealth.entity.Counselor;
 import com.sl.mentalhealth.entity.Student;
@@ -50,7 +51,8 @@ public class LocalAuthService {
     Student student = studentMapper.selectById(username);
 
     if (student != null && Objects.equals(student.getPassword(), password)) {
-      return new LoginResponseVO("student", username, "/student");
+      String token = JwtUtil.generateToken(username, "student");
+      return new LoginResponseVO("student", username, "/student", token);
     }
 
     throw new RuntimeException("账号或密码错误");
@@ -60,7 +62,8 @@ public class LocalAuthService {
     Teacher teacher = teacherMapper.selectById(username);
 
     if (teacher != null && Objects.equals(teacher.getPassword(), password)) {
-      return new LoginResponseVO("teacher", username, "/teacher");
+      String token = JwtUtil.generateToken(username, "teacher");
+      return new LoginResponseVO("teacher", username, "/teacher", token);
     }
 
     throw new RuntimeException("账号或密码错误");
@@ -69,9 +72,9 @@ public class LocalAuthService {
   private LoginResponseVO loginCounselor(String username, String password) {
     Counselor counselor = counselorMapper.selectById(username);
 
-    if (counselor != null
-        && Objects.equals(counselor.getPassword(), password)) {
-      return new LoginResponseVO("counselor", username, "/counselor");
+    if (counselor != null && Objects.equals(counselor.getPassword(), password)) {
+      String token = JwtUtil.generateToken(username, "counselor");
+      return new LoginResponseVO("counselor", username, "/counselor", token);
     }
 
     throw new RuntimeException("账号或密码错误");
@@ -81,7 +84,8 @@ public class LocalAuthService {
     Admin admin = adminMapper.selectById(username);
 
     if (admin != null && Objects.equals(admin.getPassword(), password)) {
-      return new LoginResponseVO("admin", username, "/admin");
+      String token = JwtUtil.generateToken(username, "admin");
+      return new LoginResponseVO("admin", username, "/admin", token);
     }
 
     throw new RuntimeException("账号或密码错误");

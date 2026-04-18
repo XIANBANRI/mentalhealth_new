@@ -18,17 +18,13 @@ public class AuthController {
 
   @PostMapping("/login")
   public Result<LoginResponseVO> login(@RequestBody LoginRequest request) {
-    System.out.println("收到登录请求: role=" + request.getRole() + ", username=" + request.getUsername());
     try {
       LoginResponseVO responseVO = authGatewayService.login(request);
-      System.out.println("登录成功返回");
       return Result.success("登录成功", responseVO);
     } catch (IllegalArgumentException e) {
-      System.out.println("参数异常: " + e.getMessage());
       return Result.badRequest(e.getMessage());
     } catch (Exception e) {
-      System.out.println("登录异常: " + e.getMessage());
-      return Result.error(e.getMessage());
+      return Result.error(e.getMessage() == null ? "登录失败" : e.getMessage());
     }
   }
 }

@@ -115,16 +115,6 @@ const queryForm = reactive({
   status: ""
 })
 
-const studentId = computed(() => {
-  return (
-      localStorage.getItem("studentId") ||
-      localStorage.getItem("student_id") ||
-      localStorage.getItem("account") ||
-      localStorage.getItem("username") ||
-      ""
-  )
-})
-
 const filteredRecordList = computed(() => {
   if (!queryForm.status) {
     return recordList.value
@@ -186,19 +176,9 @@ const handlePageChange = (page) => {
 }
 
 const loadRecordList = async () => {
-  if (!studentId.value) {
-    ElMessage.error("未获取到学生账号")
-    return
-  }
-
   loading.value = true
   try {
-    const res = await request.get("/appointment/my", {
-      params: {
-        studentId: studentId.value
-      }
-    })
-
+    const res = await request.get("/api/student/appointment/my")
     const result = normalizeResult(res)
 
     if (result?.code === 200 || result?.success === true) {
@@ -232,9 +212,8 @@ const cancelAppointment = async (row) => {
       type: "warning"
     })
 
-    const res = await request.post("/appointment/cancel", {
-      appointmentId: row.id,
-      studentId: studentId.value
+    const res = await request.post("/api/student/appointment/cancel", {
+      appointmentId: row.id
     })
 
     const result = normalizeResult(res)

@@ -1,11 +1,14 @@
 package com.sl.mentalhealth.controller;
 
 import com.sl.mentalhealth.common.Result;
+import com.sl.mentalhealth.config.LoginUser;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.dto.AssessmentScaleUpdateRequest;
 import com.sl.mentalhealth.kafka.message.AssessmentScaleManageRequestMessage;
 import com.sl.mentalhealth.kafka.message.AssessmentScaleManageResponseMessage;
 import com.sl.mentalhealth.service.AssessmentScaleExcelParserService;
 import com.sl.mentalhealth.service.AssessmentScaleManageGatewayService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -34,8 +37,15 @@ class AdminAssessmentScaleControllerTest {
   @InjectMocks
   private AdminAssessmentScaleController controller;
 
+  @AfterEach
+  void tearDown() {
+    UserContext.clear();
+  }
+
   @Test
   void importScale_success() throws Exception {
+    UserContext.set(new LoginUser("admin", "admin"));
+
     MockMultipartFile questionFile =
         new MockMultipartFile("questionFile", "question.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -46,12 +56,12 @@ class AdminAssessmentScaleControllerTest {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             new byte[]{4, 5, 6});
 
-    List questionList = Collections.emptyList();
-    List ruleList = Collections.emptyList();
+    List<?> questionList = Collections.emptyList();
+    List<?> ruleList = Collections.emptyList();
     Map<String, Object> data = Collections.emptyMap();
 
-    when(assessmentScaleExcelParserService.parseQuestionExcel(questionFile)).thenReturn(questionList);
-    when(assessmentScaleExcelParserService.parseRuleExcel(ruleFile)).thenReturn(ruleList);
+    when(assessmentScaleExcelParserService.parseQuestionExcel(questionFile)).thenReturn((List) questionList);
+    when(assessmentScaleExcelParserService.parseRuleExcel(ruleFile)).thenReturn((List) ruleList);
 
     AssessmentScaleManageResponseMessage response = mock(AssessmentScaleManageResponseMessage.class);
     when(response.getSuccess()).thenReturn(true);
@@ -97,7 +107,39 @@ class AdminAssessmentScaleControllerTest {
   }
 
   @Test
+  void importScale_whenOperatorBlank_shouldUseCurrentAdminFromUserContext() throws Exception {
+    UserContext.set(new LoginUser("admin_current", "admin"));
+
+    MockMultipartFile questionFile =
+        new MockMultipartFile("questionFile", "question.xlsx", "application/octet-stream", new byte[]{1});
+    MockMultipartFile ruleFile =
+        new MockMultipartFile("ruleFile", "rule.xlsx", "application/octet-stream", new byte[]{1});
+
+    when(assessmentScaleExcelParserService.parseQuestionExcel(questionFile)).thenReturn(Collections.emptyList());
+    when(assessmentScaleExcelParserService.parseRuleExcel(ruleFile)).thenReturn(Collections.emptyList());
+
+    AssessmentScaleManageResponseMessage response = mock(AssessmentScaleManageResponseMessage.class);
+    when(response.getSuccess()).thenReturn(true);
+    when(response.getMessage()).thenReturn("导入成功");
+    when(response.getData()).thenReturn(Collections.emptyMap());
+
+    when(assessmentScaleManageGatewayService.importScale(any())).thenReturn(response);
+
+    controller.importScale(
+        "SAS", "焦虑量表", "焦虑", null, "   ", questionFile, ruleFile
+    );
+
+    ArgumentCaptor<AssessmentScaleManageRequestMessage> captor =
+        ArgumentCaptor.forClass(AssessmentScaleManageRequestMessage.class);
+    verify(assessmentScaleManageGatewayService).importScale(captor.capture());
+
+    assertEquals("admin_current", captor.getValue().getOperator());
+  }
+
+  @Test
   void importScale_whenGatewayReturnsFalse_shouldReturnError() throws Exception {
+    UserContext.set(new LoginUser("admin", "admin"));
+
     MockMultipartFile questionFile =
         new MockMultipartFile("questionFile", "question.xlsx", "application/octet-stream", new byte[]{1});
     MockMultipartFile ruleFile =
@@ -124,6 +166,8 @@ class AdminAssessmentScaleControllerTest {
 
   @Test
   void importScale_whenParserThrows_shouldReturnError() throws Exception {
+    UserContext.set(new LoginUser("admin", "admin"));
+
     MockMultipartFile questionFile =
         new MockMultipartFile("questionFile", "question.xlsx", "application/octet-stream", new byte[]{1});
     MockMultipartFile ruleFile =
@@ -183,10 +227,10 @@ class AdminAssessmentScaleControllerTest {
   @Test
   void update_success() {
     AssessmentScaleUpdateRequest request = mock(AssessmentScaleUpdateRequest.class);
-    List rules = Collections.emptyList();
+    List<?> rules = Collections.emptyList();
     Map<String, Object> data = Collections.emptyMap();
 
-    when(request.getRules()).thenReturn(rules);
+    when(request.getRules()).thenReturn((List) rules);
 
     AssessmentScaleManageResponseMessage response = mock(AssessmentScaleManageResponseMessage.class);
     when(response.getSuccess()).thenReturn(true);
@@ -201,18 +245,18 @@ class AdminAssessmentScaleControllerTest {
     assertEquals("修改成功", result.getMessage());
     assertSame(data, result.getData());
 
-    verify(assessmentScaleExcelParserService).validateRuleList(rules);
+    verify(assessmentScaleExcelParserService).validateRuleList((List) rules);
     verify(assessmentScaleManageGatewayService).update(request);
   }
 
   @Test
   void update_whenValidateFails_shouldReturnError() {
     AssessmentScaleUpdateRequest request = mock(AssessmentScaleUpdateRequest.class);
-    List rules = Collections.emptyList();
+    List<?> rules = Collections.emptyList();
 
-    when(request.getRules()).thenReturn(rules);
+    when(request.getRules()).thenReturn((List) rules);
     doThrow(new RuntimeException("规则校验失败"))
-        .when(assessmentScaleExcelParserService).validateRuleList(rules);
+        .when(assessmentScaleExcelParserService).validateRuleList((List) rules);
 
     Result<?> result = controller.update(request);
 

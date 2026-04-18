@@ -59,26 +59,18 @@ const profile = reactive({
   avatarUrl: ""
 })
 
-const assignProfile = (data = {}, fallbackAccount = "") => {
-  profile.account = data.account || fallbackAccount || ""
+const assignProfile = (data = {}) => {
+  profile.account =
+      data.account ||
+      localStorage.getItem("adminAccount") ||
+      localStorage.getItem("username") ||
+      ""
   profile.name = data.name || ""
   profile.avatarUrl = data.avatarUrl || ""
 
   localStorage.setItem("adminAccount", profile.account)
   localStorage.setItem("adminName", profile.name)
   localStorage.setItem("adminAvatarUrl", profile.avatarUrl)
-}
-
-const getAdminAccount = () => {
-  const account =
-      localStorage.getItem("adminAccount") || localStorage.getItem("username")
-
-  if (!account) {
-    ElMessage.error("未获取到管理员账号，请重新登录")
-    return ""
-  }
-
-  return account
 }
 
 const buildAvatarUrl = (path) => {
@@ -97,19 +89,14 @@ const avatarFallback = computed(() => {
 })
 
 const loadProfile = async () => {
-  const account = getAdminAccount()
-  if (!account) return
-
   loading.value = true
   try {
-    const result = await request.get("/api/admin/profile", {
-      params: { account }
-    })
+    const result = await request.get("/api/admin/profile")
 
     const success = result?.code === 200 || result?.success === true
 
     if (success) {
-      assignProfile(result?.data || {}, account)
+      assignProfile(result?.data || {})
     } else {
       ElMessage.error(result?.message || "查询失败")
     }
@@ -141,14 +128,7 @@ const beforeAvatarUpload = (rawFile) => {
 }
 
 const handleAvatarUpload = async (options) => {
-  const account = getAdminAccount()
-  if (!account) {
-    options.onError(new Error("未获取到管理员账号"))
-    return
-  }
-
   const formData = new FormData()
-  formData.append("account", account)
   formData.append("file", options.file)
 
   uploading.value = true
@@ -163,7 +143,7 @@ const handleAvatarUpload = async (options) => {
     const success = result?.code === 200 || result?.success === true
 
     if (success) {
-      assignProfile(result?.data || {}, account)
+      assignProfile(result?.data || {})
       ElMessage.success(result?.message || "头像上传成功")
       options.onSuccess(result)
     } else {

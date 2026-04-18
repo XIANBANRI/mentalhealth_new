@@ -1,7 +1,7 @@
 package com.sl.mentalhealth.controller;
 
 import com.sl.mentalhealth.common.Result;
-import com.sl.mentalhealth.dto.TeacherProfileRequest;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.kafka.message.TeacherProfileResponseMessage;
 import com.sl.mentalhealth.service.AvatarStorageService;
 import com.sl.mentalhealth.service.TeacherProfileGatewayService;
@@ -14,21 +14,20 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/teacher")
 @RequiredArgsConstructor
-@CrossOrigin
 public class TeacherProfileController {
 
   private final TeacherProfileGatewayService teacherProfileGatewayService;
   private final AvatarStorageService avatarStorageService;
 
-  @PostMapping("/profile")
-  public Result<?> getTeacherProfile(@RequestBody TeacherProfileRequest request) {
-    if (request == null || request.getTeacherAccount() == null
-        || request.getTeacherAccount().trim().isEmpty()) {
+  @GetMapping("/profile")
+  public Result<?> getTeacherProfile() {
+    String teacherAccount = UserContext.getUsername();
+    if (teacherAccount == null || teacherAccount.trim().isEmpty()) {
       return Result.badRequest("老师账号不能为空");
     }
 
     TeacherProfileResponseMessage response =
-        teacherProfileGatewayService.getTeacherProfile(request.getTeacherAccount());
+        teacherProfileGatewayService.getTeacherProfile(teacherAccount);
 
     if (response.isSuccess()) {
       return Result.success(response.getMessage(), response.getData());
@@ -37,9 +36,8 @@ public class TeacherProfileController {
   }
 
   @PostMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public Result<?> uploadAvatar(@RequestParam("teacherAccount") String teacherAccount,
-      @RequestParam("file") MultipartFile file) {
-
+  public Result<?> uploadAvatar(@RequestParam("file") MultipartFile file) {
+    String teacherAccount = UserContext.getUsername();
     if (teacherAccount == null || teacherAccount.trim().isEmpty()) {
       return Result.badRequest("老师账号不能为空");
     }

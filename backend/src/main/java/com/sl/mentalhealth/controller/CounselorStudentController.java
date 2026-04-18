@@ -1,6 +1,7 @@
 package com.sl.mentalhealth.controller;
 
 import com.sl.mentalhealth.common.Result;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.dto.CounselorStudentQueryRequest;
 import com.sl.mentalhealth.service.CounselorStudentGatewayService;
 import com.sl.mentalhealth.vo.CounselorStudentDetailVO;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/counselor/student")
+@RequestMapping("/api/counselor/student")
 @RequiredArgsConstructor
 public class CounselorStudentController {
 
@@ -25,8 +26,9 @@ public class CounselorStudentController {
    * 获取当前辅导员管理的班级列表
    */
   @GetMapping("/classes")
-  public Result<List<String>> classes(@RequestParam String counselorAccount) {
+  public Result<List<String>> classes() {
     try {
+      String counselorAccount = UserContext.getUsername();
       List<String> result = counselorStudentGatewayService.listManagedClasses(counselorAccount);
       return Result.success("查询班级列表成功", result);
     } catch (Exception e) {
@@ -40,6 +42,12 @@ public class CounselorStudentController {
   @PostMapping("/list")
   public Result<CounselorStudentPageVO> list(@RequestBody CounselorStudentQueryRequest request) {
     try {
+      String counselorAccount = UserContext.getUsername();
+      if (request == null) {
+        request = new CounselorStudentQueryRequest();
+      }
+      request.setCounselorAccount(counselorAccount);
+
       CounselorStudentPageVO result = counselorStudentGatewayService.listStudents(request);
       return Result.success("查询学生列表成功", result);
     } catch (Exception e) {
@@ -51,9 +59,9 @@ public class CounselorStudentController {
    * 查询学生详情 + 学生心理测试汇总记录
    */
   @GetMapping("/detail")
-  public Result<CounselorStudentDetailVO> detail(@RequestParam String counselorAccount,
-      @RequestParam String studentId) {
+  public Result<CounselorStudentDetailVO> detail(@RequestParam String studentId) {
     try {
+      String counselorAccount = UserContext.getUsername();
       CounselorStudentDetailVO result =
           counselorStudentGatewayService.getStudentDetail(counselorAccount, studentId);
       return Result.success("查询学生详情成功", result);

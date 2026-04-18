@@ -515,7 +515,7 @@ export default {
       this.loading = true
       try {
         const res = await request({
-          url: '/admin/counselor/page',
+          url: '/api/admin/counselor/page',
           method: 'post',
           data: {
             pageNum: this.pagination.pageNum,
@@ -620,7 +620,7 @@ export default {
         this.submitLoading = true
         try {
           const res = await request({
-            url: '/admin/counselor/create',
+            url: '/api/admin/counselor/create',
             method: 'post',
             data: {
               account: this.addForm.account,
@@ -648,7 +648,7 @@ export default {
     async openEditDialog(account) {
       try {
         const res = await request({
-          url: '/admin/counselor/detail',
+          url: '/api/admin/counselor/detail',
           method: 'get',
           params: { account }
         })
@@ -696,7 +696,7 @@ export default {
           }
 
           const res = await request({
-            url: '/admin/counselor/update',
+            url: '/api/admin/counselor/update',
             method: 'post',
             data: payload
           })
@@ -716,7 +716,7 @@ export default {
     async openDetailDialog(account) {
       try {
         const res = await request({
-          url: '/admin/counselor/detail',
+          url: '/api/admin/counselor/detail',
           method: 'get',
           params: { account }
         })
@@ -764,7 +764,7 @@ export default {
       this.classSubmitLoading = true
       try {
         const res = await request({
-          url: '/admin/counselor/update-classes',
+          url: '/api/admin/counselor/update-classes',
           method: 'post',
           data: {
             account: this.detailData.account,

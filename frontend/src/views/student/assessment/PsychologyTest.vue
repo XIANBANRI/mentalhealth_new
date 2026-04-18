@@ -225,13 +225,6 @@ const buildResultMessage = (data) => {
 }
 
 const submitAssessment = async () => {
-  const studentId = localStorage.getItem("studentId")
-
-  if (!studentId) {
-    ElMessage.error("未获取到学生学号，请重新登录")
-    return
-  }
-
   if (!currentScale.value || !currentScaleId.value) {
     ElMessage.error("请先选择量表")
     return
@@ -264,7 +257,6 @@ const submitAssessment = async () => {
   submitLoading.value = true
   try {
     const res = await request.post("/api/student/assessment/submit", {
-      studentId,
       semester: selectedSemester.value,
       scaleId: currentScaleId.value,
       versionId: currentVersionId.value,

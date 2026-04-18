@@ -70,7 +70,7 @@ const profile = reactive({
 })
 
 const assignProfile = (data = {}, fallbackTeacherAccount = "") => {
-  profile.teacherAccount = data.teacherAccount || fallbackTeacherAccount || ""
+  profile.teacherAccount = data.teacherAccount || fallbackTeacherAccount || localStorage.getItem("teacherAccount") || localStorage.getItem("username") || ""
   profile.teacherName = data.teacherName || data.name || ""
   profile.phone = data.phone || ""
   profile.officeLocation = data.officeLocation || ""
@@ -115,7 +115,7 @@ const loadProfile = async () => {
 
   loading.value = true
   try {
-    const result = await request.post("/api/teacher/profile", { teacherAccount })
+    const result = await request.get("/api/teacher/profile")
     const success = result?.code === 200 || result?.success === true
 
     if (success) {
@@ -158,7 +158,6 @@ const handleAvatarUpload = async (options) => {
   }
 
   const formData = new FormData()
-  formData.append("teacherAccount", teacherAccount)
   formData.append("file", options.file)
 
   uploading.value = true

@@ -1,10 +1,12 @@
 package com.sl.mentalhealth.controller;
 
 import com.sl.mentalhealth.common.Result;
-import com.sl.mentalhealth.dto.CounselorProfileRequest;
+import com.sl.mentalhealth.config.LoginUser;
+import com.sl.mentalhealth.config.UserContext;
 import com.sl.mentalhealth.service.AvatarStorageService;
 import com.sl.mentalhealth.service.CounselorProfileGatewayService;
 import com.sl.mentalhealth.vo.CounselorProfileResponseVO;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,26 +30,19 @@ class CounselorProfileControllerTest {
   @InjectMocks
   private CounselorProfileController controller;
 
-  @Test
-  void getProfile_whenRequestNull_shouldReturnError() {
-    Result<?> result = controller.getProfile(null);
-
-    assertEquals(500, result.getCode());
-    assertEquals("辅导员账号不能为空", result.getMessage());
-    assertNull(result.getData());
-
-    verifyNoInteractions(counselorProfileGatewayService);
+  @AfterEach
+  void tearDown() {
+    UserContext.clear();
   }
 
   @Test
-  void getProfile_whenAccountBlank_shouldReturnError() {
-    CounselorProfileRequest request = mock(CounselorProfileRequest.class);
-    when(request.getAccount()).thenReturn("   ");
+  void getProfile_whenCurrentUserBlank_shouldReturnError() {
+    UserContext.set(new LoginUser("   ", "counselor"));
 
-    Result<?> result = controller.getProfile(request);
+    Result<?> result = controller.getProfile();
 
     assertEquals(500, result.getCode());
-    assertEquals("辅导员账号不能为空", result.getMessage());
+    assertEquals("当前登录辅导员账号为空", result.getMessage());
     assertNull(result.getData());
 
     verifyNoInteractions(counselorProfileGatewayService);
@@ -55,13 +50,12 @@ class CounselorProfileControllerTest {
 
   @Test
   void getProfile_success() {
-    CounselorProfileRequest request = mock(CounselorProfileRequest.class);
-    CounselorProfileResponseVO vo = mock(CounselorProfileResponseVO.class);
+    UserContext.set(new LoginUser(" counselor1 ", "counselor"));
 
-    when(request.getAccount()).thenReturn(" counselor1 ");
+    CounselorProfileResponseVO vo = mock(CounselorProfileResponseVO.class);
     when(counselorProfileGatewayService.getProfile("counselor1")).thenReturn(vo);
 
-    Result<?> result = controller.getProfile(request);
+    Result<?> result = controller.getProfile();
 
     assertEquals(200, result.getCode());
     assertEquals("查询成功", result.getMessage());
@@ -69,14 +63,16 @@ class CounselorProfileControllerTest {
   }
 
   @Test
-  void uploadAvatar_whenAccountBlank_shouldReturnError() {
+  void uploadAvatar_whenCurrentUserBlank_shouldReturnError() {
+    UserContext.set(new LoginUser("   ", "counselor"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1});
 
-    Result<?> result = controller.uploadAvatar("   ", file);
+    Result<?> result = controller.uploadAvatar(file);
 
     assertEquals(500, result.getCode());
-    assertEquals("辅导员账号不能为空", result.getMessage());
+    assertEquals("当前登录辅导员账号为空", result.getMessage());
     assertNull(result.getData());
 
     verifyNoInteractions(counselorProfileGatewayService, avatarStorageService);
@@ -84,6 +80,8 @@ class CounselorProfileControllerTest {
 
   @Test
   void uploadAvatar_success_shouldDeleteOldAvatarWhenChanged() {
+    UserContext.set(new LoginUser(" c001 ", "counselor"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1, 2, 3});
 
@@ -101,7 +99,7 @@ class CounselorProfileControllerTest {
     when(counselorProfileGatewayService.updateAvatar("c001", "/avatar/counselor/new.png"))
         .thenReturn(updatedProfile);
 
-    Result<?> result = controller.uploadAvatar(" c001 ", file);
+    Result<?> result = controller.uploadAvatar(file);
 
     assertEquals(200, result.getCode());
     assertEquals("头像上传成功", result.getMessage());
@@ -112,6 +110,8 @@ class CounselorProfileControllerTest {
 
   @Test
   void uploadAvatar_whenUpdateFails_shouldRollbackNewAvatar() {
+    UserContext.set(new LoginUser("c001", "counselor"));
+
     MockMultipartFile file =
         new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1, 2, 3});
 
@@ -127,7 +127,7 @@ class CounselorProfileControllerTest {
     when(counselorProfileGatewayService.updateAvatar("c001", "/avatar/counselor/new.png"))
         .thenThrow(new RuntimeException("更新头像失败"));
 
-    Result<?> result = controller.uploadAvatar("c001", file);
+    Result<?> result = controller.uploadAvatar(file);
 
     assertEquals(500, result.getCode());
     assertEquals("更新头像失败", result.getMessage());

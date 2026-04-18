@@ -75,27 +75,25 @@ const profile = reactive({
   avatarUrl: ""
 })
 
-const assignProfile = (data = {}, fallbackAccount = "") => {
-  profile.counselorId = data.counselorId || fallbackAccount || ""
+const assignProfile = (data = {}) => {
+  profile.counselorId =
+      data.counselorId ||
+      localStorage.getItem("counselorId") ||
+      localStorage.getItem("counselorAccount") ||
+      localStorage.getItem("username") ||
+      ""
   profile.name = data.name || ""
   profile.college = data.college || ""
   profile.grade = data.grade || ""
   profile.phone = data.phone || ""
   profile.avatarUrl = data.avatarUrl || ""
 
+  localStorage.setItem("counselorId", profile.counselorId)
   localStorage.setItem("counselorAccount", profile.counselorId)
-}
-
-const getCounselorAccount = () => {
-  const account =
-      localStorage.getItem("counselorAccount") || localStorage.getItem("username")
-
-  if (!account) {
-    ElMessage.error("未获取到辅导员账号，请重新登录")
-    return ""
-  }
-
-  return account
+  localStorage.setItem("counselorName", profile.name)
+  localStorage.setItem("college", profile.college)
+  localStorage.setItem("grade", profile.grade)
+  localStorage.setItem("phone", profile.phone)
 }
 
 const buildAvatarUrl = (path) => {
@@ -114,16 +112,13 @@ const avatarFallback = computed(() => {
 })
 
 const loadProfile = async () => {
-  const account = getCounselorAccount()
-  if (!account) return
-
   loading.value = true
   try {
-    const result = await request.post("/api/counselor/profile", { account })
+    const result = await request.get("/api/counselor/profile")
     const success = result?.code === 200 || result?.success === true
 
     if (success) {
-      assignProfile(result?.data || {}, account)
+      assignProfile(result?.data || {})
     } else {
       ElMessage.error(result?.message || "查询失败")
     }
@@ -155,14 +150,7 @@ const beforeAvatarUpload = (rawFile) => {
 }
 
 const handleAvatarUpload = async (options) => {
-  const account = getCounselorAccount()
-  if (!account) {
-    options.onError(new Error("未获取到辅导员账号"))
-    return
-  }
-
   const formData = new FormData()
-  formData.append("account", account)
   formData.append("file", options.file)
 
   uploading.value = true
@@ -177,7 +165,7 @@ const handleAvatarUpload = async (options) => {
     const success = result?.code === 200 || result?.success === true
 
     if (success) {
-      assignProfile(result?.data || {}, account)
+      assignProfile(result?.data || {})
       ElMessage.success(result?.message || "头像上传成功")
       options.onSuccess(result)
     } else {

@@ -69,7 +69,7 @@
 
 <script>
 import * as echarts from 'echarts'
-import { queryCounselorTrendReport } from '@/api/counselorTrendReport'
+import request from '@/utils/request'
 
 export default {
   name: 'TrendReport',
@@ -100,40 +100,10 @@ export default {
     }
   },
   methods: {
-    getCounselorAccount() {
-      const loginUser =
-          JSON.parse(localStorage.getItem('loginUser') || 'null') ||
-          JSON.parse(sessionStorage.getItem('loginUser') || 'null') ||
-          JSON.parse(localStorage.getItem('userInfo') || 'null') ||
-          JSON.parse(sessionStorage.getItem('userInfo') || 'null')
-
-      if (loginUser) {
-        return (
-            loginUser.account ||
-            loginUser.counselorAccount ||
-            loginUser.username ||
-            ''
-        )
-      }
-
-      return (
-          localStorage.getItem('counselorAccount') ||
-          sessionStorage.getItem('counselorAccount') ||
-          ''
-      )
-    },
-
     async loadReport() {
-      const counselorAccount = this.getCounselorAccount()
-      if (!counselorAccount) {
-        this.$message.error('未获取到辅导员账号，请重新登录')
-        return
-      }
-
       this.loading = true
       try {
-        const res = await queryCounselorTrendReport({
-          counselorAccount,
+        const res = await request.post('/api/counselor/trend-report/query', {
           semester: this.selectedSemester
         })
 
@@ -163,7 +133,11 @@ export default {
         })
       } catch (e) {
         console.error(e)
-        this.$message.error('趋势报告加载失败')
+        this.$message.error(
+            e?.response?.data?.message ||
+            e?.message ||
+            '趋势报告加载失败'
+        )
       } finally {
         this.loading = false
       }
