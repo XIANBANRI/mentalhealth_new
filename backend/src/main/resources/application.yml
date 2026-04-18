@@ -55,11 +55,21 @@ mybatis-plus:
 app:
   upload:
     avatar-root-dir: E:/mental_health/backend/uploads/avatar
+
   kafka:
     student-profile-timeout-seconds: 10
     teacher-profile-timeout-seconds: 8
     counselor-profile-timeout-seconds: 10
     admin-profile-timeout-seconds: 10
+
+  jwt:
+    expire-seconds: 86400
+    header: Authorization
+    token-prefix: Bearer
+
+  redis:
+    login-token-prefix: "login:token:"
+    login-token-ttl-minutes: 1440
 
 logging:
   level:

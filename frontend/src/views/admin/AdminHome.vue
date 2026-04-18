@@ -144,21 +144,33 @@ const clearLoginCache = () => {
   localStorage.removeItem("adminAvatarUrl")
 }
 
-const handleCommand = async (command) => {
-  if (command === "logout") {
-    try {
-      await ElMessageBox.confirm("确认退出登录吗？", "提示", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning"
-      })
+const doLogout = async () => {
+  try {
+    await request.post("/api/auth/logout")
+  } catch (error) {
+    console.warn("退出登录接口调用失败：", error)
+  } finally {
+    clearLoginCache()
+    ElMessage.success("已退出登录")
+    router.replace("/")
+  }
+}
 
-      clearLoginCache()
-      ElMessage.success("已退出登录")
-      router.push("/")
-    } catch (e) {
-      // 用户取消
-    }
+const handleCommand = async (command) => {
+  if (command !== "logout") {
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm("确认退出登录吗？", "提示", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning"
+    })
+
+    await doLogout()
+  } catch (error) {
+    // 用户取消
   }
 }
 

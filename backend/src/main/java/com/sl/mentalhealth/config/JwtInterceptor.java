@@ -1,23 +1,27 @@
 package com.sl.mentalhealth.config;
 
 import com.sl.mentalhealth.common.JwtUtil;
-import io.jsonwebtoken.Claims;
+import com.sl.mentalhealth.service.TokenRedisService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 public class JwtInterceptor implements HandlerInterceptor {
 
+  private final TokenRedisService tokenRedisService;
+
+  public JwtInterceptor(TokenRedisService tokenRedisService) {
+    this.tokenRedisService = tokenRedisService;
+  }
+
   @Override
   public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
     String uri = request.getRequestURI();
 
-    // 放行跨域预检请求
     if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
       return true;
     }
 
-    // 放行登录和找回密码
     if ("/api/auth/login".equals(uri) || "/api/password/reset".equals(uri)) {
       return true;
     }
@@ -28,15 +32,29 @@ public class JwtInterceptor implements HandlerInterceptor {
       return false;
     }
 
-    String token = authorization.substring(7);
+    String token = authorization.substring(7).trim();
+    if (token.isEmpty()) {
+      writeJson(response, HttpServletResponse.SC_UNAUTHORIZED, "未登录或Token缺失");
+      return false;
+    }
 
     try {
-      Claims claims = JwtUtil.parseToken(token);
-      String username = claims.get("username") == null ? null : claims.get("username").toString();
-      String role = claims.get("role") == null ? null : claims.get("role").toString();
+      if (!JwtUtil.validateToken(token)) {
+        writeJson(response, HttpServletResponse.SC_UNAUTHORIZED, "Token无效或已过期");
+        return false;
+      }
+
+      LoginUser loginUser = tokenRedisService.getLoginUser(token);
+      if (loginUser == null) {
+        writeJson(response, HttpServletResponse.SC_UNAUTHORIZED, "登录状态已失效，请重新登录");
+        return false;
+      }
+
+      String username = loginUser.getUsername();
+      String role = loginUser.getRole();
 
       if (username == null || username.trim().isEmpty() || role == null || role.trim().isEmpty()) {
-        writeJson(response, HttpServletResponse.SC_UNAUTHORIZED, "Token信息不完整");
+        writeJson(response, HttpServletResponse.SC_UNAUTHORIZED, "登录信息不完整");
         return false;
       }
 
@@ -45,10 +63,14 @@ public class JwtInterceptor implements HandlerInterceptor {
         return false;
       }
 
-      UserContext.set(new LoginUser(username, role));
+      UserContext.setLoginUser(loginUser);
+
+      tokenRedisService.refreshToken(token);
+
       return true;
     } catch (Exception e) {
-      writeJson(response, HttpServletResponse.SC_UNAUTHORIZED, "Token无效或已过期");
+      e.printStackTrace();
+      writeJson(response, HttpServletResponse.SC_UNAUTHORIZED, "Token校验失败，请重新登录");
       return false;
     }
   }

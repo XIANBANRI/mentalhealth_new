@@ -127,6 +127,10 @@ const clearLoginCache = () => {
   localStorage.removeItem("counselorName")
   localStorage.removeItem("counselorAccount")
   localStorage.removeItem("counselorAvatarUrl")
+
+  localStorage.removeItem("adminAccount")
+  localStorage.removeItem("adminName")
+  localStorage.removeItem("adminAvatarUrl")
 }
 
 const loadCounselorProfile = async () => {
@@ -134,7 +138,7 @@ const loadCounselorProfile = async () => {
 
   if (role !== "counselor") {
     ElMessage.error("当前登录身份不是辅导员")
-    router.push("/")
+    router.replace("/")
     return
   }
 
@@ -176,20 +180,33 @@ const loadCounselorProfile = async () => {
   }
 }
 
+const doLogout = async () => {
+  try {
+    await request.post("/api/auth/logout")
+  } catch (error) {
+    console.warn("退出登录接口调用失败：", error)
+  } finally {
+    clearLoginCache()
+    ElMessage.success("已退出登录")
+    router.replace("/")
+  }
+}
+
 const handleCommand = async (command) => {
-  if (command === "logout") {
-    try {
-      await ElMessageBox.confirm("确认退出登录吗？", "提示", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning"
-      })
-      clearLoginCache()
-      ElMessage.success("已退出登录")
-      router.push("/")
-    } catch (e) {
-      // 用户取消
-    }
+  if (command !== "logout") {
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm("确认退出登录吗？", "提示", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning"
+    })
+
+    await doLogout()
+  } catch (error) {
+    // 用户取消
   }
 }
 

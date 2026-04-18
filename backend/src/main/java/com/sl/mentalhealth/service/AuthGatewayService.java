@@ -1,6 +1,7 @@
 package com.sl.mentalhealth.service;
 
 import com.sl.mentalhealth.common.JwtUtil;
+import com.sl.mentalhealth.config.LoginUser;
 import com.sl.mentalhealth.dto.LoginRequest;
 import com.sl.mentalhealth.kafka.LoginRequestProducer;
 import com.sl.mentalhealth.kafka.message.LoginRequestMessage;
@@ -23,11 +24,14 @@ public class AuthGatewayService {
 
   private final LoginRequestProducer loginRequestProducer;
   private final PendingLoginService pendingLoginService;
+  private final TokenRedisService tokenRedisService;
 
   public AuthGatewayService(LoginRequestProducer loginRequestProducer,
-      PendingLoginService pendingLoginService) {
+      PendingLoginService pendingLoginService,
+      TokenRedisService tokenRedisService) {
     this.loginRequestProducer = loginRequestProducer;
     this.pendingLoginService = pendingLoginService;
+    this.tokenRedisService = tokenRedisService;
   }
 
   public LoginResponseVO login(LoginRequest request) {
@@ -64,6 +68,14 @@ public class AuthGatewayService {
       if (Boolean.TRUE.equals(response.getSuccess())) {
         String token = JwtUtil.generateToken(response.getUsername(), response.getRole());
 
+        LoginUser loginUser = new LoginUser();
+        loginUser.setUsername(response.getUsername());
+        loginUser.setRole(response.getRole());
+        loginUser.setToken(token);
+        loginUser.setLoginTime(System.currentTimeMillis());
+
+        tokenRedisService.saveToken(token, loginUser);
+
         return new LoginResponseVO(
             response.getRole(),
             response.getUsername(),
@@ -90,5 +102,12 @@ public class AuthGatewayService {
       }
       throw new RuntimeException(e.getMessage() == null ? "登录失败" : e.getMessage());
     }
+  }
+
+  public void logout(String token) {
+    if (token == null || token.trim().isEmpty()) {
+      return;
+    }
+    tokenRedisService.deleteToken(token);
   }
 }

@@ -11,7 +11,15 @@ public class UserContext {
     HOLDER.set(loginUser);
   }
 
+  public static void setLoginUser(LoginUser loginUser) {
+    HOLDER.set(loginUser);
+  }
+
   public static LoginUser get() {
+    return HOLDER.get();
+  }
+
+  public static LoginUser getLoginUser() {
     return HOLDER.get();
   }
 

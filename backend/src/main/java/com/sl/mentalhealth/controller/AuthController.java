@@ -27,4 +27,17 @@ public class AuthController {
       return Result.error(e.getMessage() == null ? "登录失败" : e.getMessage());
     }
   }
+
+  @PostMapping("/logout")
+  public Result<Void> logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
+    try {
+      if (authorization != null && authorization.startsWith("Bearer ")) {
+        String token = authorization.substring(7).trim();
+        authGatewayService.logout(token);
+      }
+      return Result.success("退出登录成功", null);
+    } catch (Exception e) {
+      return Result.error(e.getMessage() == null ? "退出登录失败" : e.getMessage());
+    }
+  }
 }

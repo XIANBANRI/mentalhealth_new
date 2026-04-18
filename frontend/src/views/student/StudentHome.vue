@@ -124,6 +124,20 @@ const clearLoginCache = () => {
   localStorage.removeItem("college")
   localStorage.removeItem("grade")
   localStorage.removeItem("phone")
+
+  localStorage.removeItem("teacherAccount")
+  localStorage.removeItem("teacherName")
+  localStorage.removeItem("teacherPhone")
+  localStorage.removeItem("officeLocation")
+
+  localStorage.removeItem("counselorId")
+  localStorage.removeItem("counselorName")
+  localStorage.removeItem("counselorAccount")
+  localStorage.removeItem("counselorAvatarUrl")
+
+  localStorage.removeItem("adminAccount")
+  localStorage.removeItem("adminName")
+  localStorage.removeItem("adminAvatarUrl")
 }
 
 const loadStudentProfile = async () => {
@@ -132,13 +146,13 @@ const loadStudentProfile = async () => {
 
   if (role !== "student") {
     ElMessage.error("当前登录身份不是学生")
-    router.push("/")
+    router.replace("/")
     return
   }
 
   if (!studentId) {
     ElMessage.error("未获取到学生学号，请重新登录")
-    router.push("/")
+    router.replace("/")
     return
   }
 
@@ -163,25 +177,39 @@ const loadStudentProfile = async () => {
       ElMessage.error(result?.message || "学生信息加载失败")
     }
   } catch (error) {
-    ElMessage.error(error?.response?.data?.message || error?.message || "学生信息加载失败")
+    ElMessage.error(
+        error?.response?.data?.message || error?.message || "学生信息加载失败"
+    )
+  }
+}
+
+const doLogout = async () => {
+  try {
+    await request.post("/api/auth/logout")
+  } catch (error) {
+    console.warn("退出登录接口调用失败：", error)
+  } finally {
+    clearLoginCache()
+    ElMessage.success("已退出登录")
+    router.replace("/")
   }
 }
 
 const handleCommand = async (command) => {
-  if (command === "logout") {
-    try {
-      await ElMessageBox.confirm("确认退出登录吗？", "提示", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning"
-      })
+  if (command !== "logout") {
+    return
+  }
 
-      clearLoginCache()
-      ElMessage.success("已退出登录")
-      router.push("/")
-    } catch (e) {
-      // 用户取消
-    }
+  try {
+    await ElMessageBox.confirm("确认退出登录吗？", "提示", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning"
+    })
+
+    await doLogout()
+  } catch (error) {
+    // 用户取消
   }
 }
 

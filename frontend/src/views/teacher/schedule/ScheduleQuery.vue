@@ -20,6 +20,7 @@
                 <div
                     v-if="hasSchedule(data.day)"
                     class="schedule-dot"
+                    :class="{ past: isPastDate(data.day) }"
                 ></div>
               </div>
             </template>
@@ -167,6 +168,12 @@ const isSameDate = (day, dateObj) => {
   return formatDate(dateObj) === day
 }
 
+// 判断是否是今天之前的日期
+const isPastDate = (day) => {
+  const today = formatDate(new Date())
+  return day < today
+}
+
 onMounted(() => {
   loadScheduleList()
 })
@@ -211,6 +218,11 @@ onMounted(() => {
   border-radius: 50%;
   background: #67c23a;
   margin-top: 6px;
+}
+
+/* 过去日期灰色点 */
+.schedule-dot.past {
+  background: #c0c4cc;
 }
 
 .date-info {

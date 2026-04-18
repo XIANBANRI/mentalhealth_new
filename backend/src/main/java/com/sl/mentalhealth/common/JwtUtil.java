@@ -8,6 +8,7 @@ import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 public class JwtUtil {
 
@@ -23,8 +24,10 @@ public class JwtUtil {
   public static String generateToken(String username, String role) {
     Date now = new Date();
     Date expireDate = new Date(now.getTime() + EXPIRE_MILLIS);
+    String jti = UUID.randomUUID().toString();
 
     return Jwts.builder()
+        .setId(jti)
         .claim("username", username)
         .claim("role", role)
         .setSubject(username)
@@ -52,8 +55,25 @@ public class JwtUtil {
     return value == null ? null : value.toString();
   }
 
+  public static String getJti(String token) {
+    return parseToken(token).getId();
+  }
+
   public static boolean isExpired(String token) {
     Date expiration = parseToken(token).getExpiration();
     return expiration.before(new Date());
+  }
+
+  public static boolean validateToken(String token) {
+    try {
+      Claims claims = parseToken(token);
+      return claims.getSubject() != null && !isExpired(token);
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  public static long getExpireMillis() {
+    return EXPIRE_MILLIS;
   }
 }
