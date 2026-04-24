@@ -4,7 +4,6 @@ import com.sl.mentalhealth.service.TokenRedisService;
 import java.nio.file.Paths;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -12,7 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-  @Value("${app.upload.avatar-root-dir:E:/mental_health/backend/uploads/avatar}")
+  @Value("${app.upload.avatar-root-dir:/app/uploads/avatar}")
   private String avatarRootDir;
 
   private final TokenRedisService tokenRedisService;
@@ -37,15 +36,5 @@ public class WebMvcConfig implements WebMvcConfigurer {
             "/api/auth/login",
             "/api/password/reset"
         );
-  }
-
-  @Override
-  public void addCorsMappings(CorsRegistry registry) {
-    registry.addMapping("/**")
-        .allowedOrigins("http://localhost:8081")
-        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-        .allowedHeaders("*")
-        .allowCredentials(true)
-        .maxAge(3600);
   }
 }

@@ -41,6 +41,12 @@
       <artifactId>spring-boot-starter-webmvc</artifactId>
     </dependency>
 
+    <!-- Jackson -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jackson</artifactId>
+    </dependency>
+
     <!-- MyBatis-Plus -->
     <dependency>
       <groupId>com.baomidou</groupId>
@@ -126,6 +132,7 @@
   </dependencies>
 
   <build>
+    <finalName>mentalhealth</finalName>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>

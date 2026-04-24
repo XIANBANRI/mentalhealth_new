@@ -2,7 +2,7 @@ import axios from "axios"
 import router from "@/router"
 
 const request = axios.create({
-  baseURL: "http://localhost:8080",
+  baseURL: "/",
   timeout: 15000,
   headers: {
     "Content-Type": "application/json"

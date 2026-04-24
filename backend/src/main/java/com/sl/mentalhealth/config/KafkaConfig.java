@@ -1,6 +1,12 @@
 package com.sl.mentalhealth.config;
 
 import com.sl.mentalhealth.kafka.KafkaTopics;
+import com.sl.mentalhealth.kafka.message.AdminCounselorManageRequestMessage;
+import com.sl.mentalhealth.kafka.message.AdminCounselorManageResponseMessage;
+import com.sl.mentalhealth.kafka.message.AdminProfileRequestMessage;
+import com.sl.mentalhealth.kafka.message.AdminProfileResponseMessage;
+import com.sl.mentalhealth.kafka.message.AdminTeacherManageRequestMessage;
+import com.sl.mentalhealth.kafka.message.AdminTeacherManageResponseMessage;
 import com.sl.mentalhealth.kafka.message.AppointmentRequestMessage;
 import com.sl.mentalhealth.kafka.message.AppointmentResponseMessage;
 import com.sl.mentalhealth.kafka.message.AssessmentRequestMessage;
@@ -9,6 +15,12 @@ import com.sl.mentalhealth.kafka.message.AssessmentScaleManageRequestMessage;
 import com.sl.mentalhealth.kafka.message.AssessmentScaleManageResponseMessage;
 import com.sl.mentalhealth.kafka.message.CounselorProfileRequestMessage;
 import com.sl.mentalhealth.kafka.message.CounselorProfileResponseMessage;
+import com.sl.mentalhealth.kafka.message.CounselorStudentRequestMessage;
+import com.sl.mentalhealth.kafka.message.CounselorStudentResponseMessage;
+import com.sl.mentalhealth.kafka.message.CounselorTrendReportRequestMessage;
+import com.sl.mentalhealth.kafka.message.CounselorTrendReportResponseMessage;
+import com.sl.mentalhealth.kafka.message.CounselorWarningRequestMessage;
+import com.sl.mentalhealth.kafka.message.CounselorWarningResponseMessage;
 import com.sl.mentalhealth.kafka.message.LoginRequestMessage;
 import com.sl.mentalhealth.kafka.message.LoginResponseMessage;
 import com.sl.mentalhealth.kafka.message.ResetPasswordRequestMessage;
@@ -28,6 +40,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -38,23 +51,12 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
-import com.sl.mentalhealth.kafka.message.CounselorStudentRequestMessage;
-import com.sl.mentalhealth.kafka.message.CounselorStudentResponseMessage;
-import com.sl.mentalhealth.kafka.message.CounselorWarningRequestMessage;
-import com.sl.mentalhealth.kafka.message.CounselorWarningResponseMessage;
-import com.sl.mentalhealth.kafka.message.CounselorTrendReportRequestMessage;
-import com.sl.mentalhealth.kafka.message.CounselorTrendReportResponseMessage;
-import com.sl.mentalhealth.kafka.message.AdminProfileRequestMessage;
-import com.sl.mentalhealth.kafka.message.AdminProfileResponseMessage;
-import com.sl.mentalhealth.kafka.message.AdminTeacherManageRequestMessage;
-import com.sl.mentalhealth.kafka.message.AdminTeacherManageResponseMessage;
-import com.sl.mentalhealth.kafka.message.AdminCounselorManageRequestMessage;
-import com.sl.mentalhealth.kafka.message.AdminCounselorManageResponseMessage;
 
 @Configuration
 public class KafkaConfig {
 
-  private static final String BOOTSTRAP_SERVERS = "localhost:9092";
+  @Value("${spring.kafka.bootstrap-servers}")
+  private String bootstrapServers;
 
   @Bean
   public NewTopic loginRequestTopic() {
@@ -158,10 +160,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, Object> objectProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+    Map<String, Object> props = producerProps();
     return new DefaultKafkaProducerFactory<>(props);
   }
 
@@ -172,11 +171,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, LoginRequestMessage> loginRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -186,11 +181,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, LoginResponseMessage> loginResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -200,11 +191,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, ResetPasswordRequestMessage> resetPasswordRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -214,11 +201,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, ResetPasswordResponseMessage> resetPasswordResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -228,11 +211,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, StudentProfileRequestMessage> studentProfileRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -242,11 +221,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, StudentProfileResponseMessage> studentProfileResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -256,11 +231,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, TeacherProfileRequestMessage> teacherProfileRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -270,11 +241,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, TeacherProfileResponseMessage> teacherProfileResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -284,11 +251,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AssessmentRequestMessage> assessmentRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -298,11 +261,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AssessmentResponseMessage> assessmentResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -312,11 +271,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AppointmentRequestMessage> appointmentRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -326,11 +281,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AppointmentResponseMessage> appointmentResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -340,11 +291,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, TeacherScheduleRequestMessage> teacherScheduleRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -354,11 +301,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, TeacherScheduleResponseMessage> teacherScheduleResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -368,11 +311,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, TeacherAppointmentRequestMessage> teacherAppointmentRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -382,11 +321,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, TeacherAppointmentResponseMessage> teacherAppointmentResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -396,11 +331,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, CounselorProfileRequestMessage> counselorProfileRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -410,11 +341,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, CounselorProfileResponseMessage> counselorProfileResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -424,11 +351,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AssessmentScaleManageRequestMessage> assessmentScaleManageRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -438,11 +361,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AssessmentScaleManageResponseMessage> assessmentScaleManageResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -452,13 +371,6 @@ public class KafkaConfig {
 
   @Bean(name = "kafkaListenerContainerFactory")
   public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-default-listener-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<Object> deserializer = new JacksonJsonDeserializer<>(Object.class);
     deserializer.addTrustedPackages(
         "com.sl.mentalhealth.kafka.message",
@@ -468,7 +380,8 @@ public class KafkaConfig {
     );
 
     ConsumerFactory<String, Object> consumerFactory =
-        new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+        new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-default-listener-group"),
+            new StringDeserializer(), deserializer);
 
     ConcurrentKafkaListenerContainerFactory<String, Object> factory =
         new ConcurrentKafkaListenerContainerFactory<>();
@@ -478,18 +391,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, LoginRequestMessage> loginRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-login-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<LoginRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(LoginRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-login-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -503,18 +409,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, LoginResponseMessage> loginResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-login-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<LoginResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(LoginResponseMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-login-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -528,18 +427,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, ResetPasswordRequestMessage> resetPasswordRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-reset-password-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<ResetPasswordRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(ResetPasswordRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-reset-password-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -553,18 +445,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, ResetPasswordResponseMessage> resetPasswordResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-reset-password-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<ResetPasswordResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(ResetPasswordResponseMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-reset-password-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -578,18 +463,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, StudentProfileRequestMessage> studentProfileRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-student-profile-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<StudentProfileRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(StudentProfileRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-student-profile-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -603,18 +481,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, StudentProfileResponseMessage> studentProfileResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-student-profile-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<StudentProfileResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(StudentProfileResponseMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-student-profile-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -628,18 +499,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, TeacherProfileRequestMessage> teacherProfileRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-teacher-profile-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<TeacherProfileRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(TeacherProfileRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-teacher-profile-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -653,21 +517,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, TeacherProfileResponseMessage> teacherProfileResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-teacher-profile-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<TeacherProfileResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(TeacherProfileResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-teacher-profile-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -681,21 +535,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AssessmentRequestMessage> assessmentRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-assessment-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AssessmentRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(AssessmentRequestMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.dto"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.dto");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-assessment-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -709,22 +553,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AssessmentResponseMessage> assessmentResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-assessment-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AssessmentResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(AssessmentResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-assessment-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -738,18 +571,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AppointmentRequestMessage> appointmentRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-appointment-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AppointmentRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(AppointmentRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-appointment-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -763,22 +589,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AppointmentResponseMessage> appointmentResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-appointment-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AppointmentResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(AppointmentResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-appointment-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -792,21 +607,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, TeacherScheduleRequestMessage> teacherScheduleRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-teacher-schedule-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<TeacherScheduleRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(TeacherScheduleRequestMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.dto"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.dto");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-teacher-schedule-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -820,22 +625,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, TeacherScheduleResponseMessage> teacherScheduleResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-teacher-schedule-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<TeacherScheduleResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(TeacherScheduleResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-teacher-schedule-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -849,21 +643,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, TeacherAppointmentRequestMessage> teacherAppointmentRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-teacher-appointment-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<TeacherAppointmentRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(TeacherAppointmentRequestMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.dto"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.dto");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-teacher-appointment-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -877,22 +661,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, TeacherAppointmentResponseMessage> teacherAppointmentResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-teacher-appointment-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<TeacherAppointmentResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(TeacherAppointmentResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-teacher-appointment-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -906,18 +679,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, CounselorProfileRequestMessage> counselorProfileRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-counselor-profile-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<CounselorProfileRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(CounselorProfileRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-counselor-profile-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -931,21 +697,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, CounselorProfileResponseMessage> counselorProfileResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-counselor-profile-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<CounselorProfileResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(CounselorProfileResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-counselor-profile-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -959,22 +715,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AssessmentScaleManageRequestMessage> assessmentScaleManageRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-assessment-scale-manage-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AssessmentScaleManageRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(AssessmentScaleManageRequestMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.dto",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.dto", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-assessment-scale-manage-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -988,23 +733,12 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AssessmentScaleManageResponseMessage> assessmentScaleManageResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-assessment-scale-manage-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AssessmentScaleManageResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(AssessmentScaleManageResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.dto",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.dto",
+        "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-assessment-scale-manage-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -1028,11 +762,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, CounselorStudentRequestMessage> counselorStudentRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "counselorStudentRequestKafkaTemplate")
@@ -1042,11 +772,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, CounselorStudentResponseMessage> counselorStudentResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "counselorStudentResponseKafkaTemplate")
@@ -1056,18 +782,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, CounselorStudentRequestMessage> counselorStudentRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-counselor-student-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<CounselorStudentRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(CounselorStudentRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-counselor-student-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "counselorStudentRequestKafkaListenerContainerFactory")
@@ -1081,22 +800,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, CounselorStudentResponseMessage> counselorStudentResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-counselor-student-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<CounselorStudentResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(CounselorStudentResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-counselor-student-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "counselorStudentResponseKafkaListenerContainerFactory")
@@ -1120,11 +828,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, CounselorWarningRequestMessage> counselorWarningRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "counselorWarningRequestKafkaTemplate")
@@ -1134,11 +838,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, CounselorWarningResponseMessage> counselorWarningResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "counselorWarningResponseKafkaTemplate")
@@ -1148,18 +848,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, CounselorWarningRequestMessage> counselorWarningRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-counselor-warning-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<CounselorWarningRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(CounselorWarningRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-counselor-warning-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "counselorWarningRequestKafkaListenerContainerFactory")
@@ -1173,22 +866,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, CounselorWarningResponseMessage> counselorWarningResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-counselor-warning-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<CounselorWarningResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(CounselorWarningResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-counselor-warning-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "counselorWarningResponseKafkaListenerContainerFactory")
@@ -1212,11 +894,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, CounselorTrendReportRequestMessage> counselorTrendReportRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "counselorTrendReportRequestKafkaTemplate")
@@ -1226,11 +904,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, CounselorTrendReportResponseMessage> counselorTrendReportResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "counselorTrendReportResponseKafkaTemplate")
@@ -1240,18 +914,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, CounselorTrendReportRequestMessage> counselorTrendReportRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-counselor-trend-report-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<CounselorTrendReportRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(CounselorTrendReportRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-counselor-trend-report-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "counselorTrendReportRequestKafkaListenerContainerFactory")
@@ -1265,22 +932,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, CounselorTrendReportResponseMessage> counselorTrendReportResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-counselor-trend-report-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<CounselorTrendReportResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(CounselorTrendReportResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-counselor-trend-report-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "counselorTrendReportResponseKafkaListenerContainerFactory")
@@ -1304,11 +960,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AdminProfileRequestMessage> adminProfileRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -1318,11 +970,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AdminProfileResponseMessage> adminProfileResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean
@@ -1332,18 +980,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AdminProfileRequestMessage> adminProfileRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-admin-profile-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AdminProfileRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(AdminProfileRequestMessage.class);
     deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message");
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-admin-profile-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -1357,21 +998,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AdminProfileResponseMessage> adminProfileResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-admin-profile-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AdminProfileResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(AdminProfileResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-admin-profile-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean
@@ -1395,11 +1026,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AdminTeacherManageRequestMessage> adminTeacherManageRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "adminTeacherManageRequestKafkaTemplate")
@@ -1409,11 +1036,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AdminTeacherManageResponseMessage> adminTeacherManageResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "adminTeacherManageResponseKafkaTemplate")
@@ -1423,22 +1046,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AdminTeacherManageRequestMessage> adminTeacherManageRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-admin-teacher-manage-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AdminTeacherManageRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(AdminTeacherManageRequestMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.dto",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.dto", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-admin-teacher-manage-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "adminTeacherManageRequestKafkaListenerContainerFactory")
@@ -1452,22 +1064,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AdminTeacherManageResponseMessage> adminTeacherManageResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-admin-teacher-manage-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AdminTeacherManageResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(AdminTeacherManageResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-admin-teacher-manage-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "adminTeacherManageResponseKafkaListenerContainerFactory")
@@ -1491,11 +1092,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AdminCounselorManageRequestMessage> adminCounselorManageRequestProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "adminCounselorManageRequestKafkaTemplate")
@@ -1505,11 +1102,7 @@ public class KafkaConfig {
 
   @Bean
   public ProducerFactory<String, AdminCounselorManageResponseMessage> adminCounselorManageResponseProducerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-    return new DefaultKafkaProducerFactory<>(props);
+    return new DefaultKafkaProducerFactory<>(producerProps());
   }
 
   @Bean(name = "adminCounselorManageResponseKafkaTemplate")
@@ -1519,22 +1112,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AdminCounselorManageRequestMessage> adminCounselorManageRequestConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-admin-counselor-manage-request-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AdminCounselorManageRequestMessage> deserializer =
         new JacksonJsonDeserializer<>(AdminCounselorManageRequestMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.dto",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.dto", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-admin-counselor-manage-request-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "adminCounselorManageRequestKafkaListenerContainerFactory")
@@ -1548,22 +1130,11 @@ public class KafkaConfig {
 
   @Bean
   public ConsumerFactory<String, AdminCounselorManageResponseMessage> adminCounselorManageResponseConsumerFactory() {
-    Map<String, Object> props = new HashMap<>();
-    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-    props.put(ConsumerConfig.GROUP_ID_CONFIG, "mh-admin-counselor-manage-response-group");
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-
     JacksonJsonDeserializer<AdminCounselorManageResponseMessage> deserializer =
         new JacksonJsonDeserializer<>(AdminCounselorManageResponseMessage.class);
-    deserializer.addTrustedPackages(
-        "com.sl.mentalhealth.kafka.message",
-        "com.sl.mentalhealth.vo",
-        "java.util"
-    );
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    deserializer.addTrustedPackages("com.sl.mentalhealth.kafka.message", "com.sl.mentalhealth.vo", "java.util");
+    return new DefaultKafkaConsumerFactory<>(baseConsumerProps("mh-admin-counselor-manage-response-group"),
+        new StringDeserializer(), deserializer);
   }
 
   @Bean(name = "adminCounselorManageResponseKafkaListenerContainerFactory")
@@ -1573,5 +1144,23 @@ public class KafkaConfig {
         new ConcurrentKafkaListenerContainerFactory<>();
     factory.setConsumerFactory(adminCounselorManageResponseConsumerFactory());
     return factory;
+  }
+
+  private Map<String, Object> producerProps() {
+    Map<String, Object> props = new HashMap<>();
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+    return props;
+  }
+
+  private Map<String, Object> baseConsumerProps(String groupId) {
+    Map<String, Object> props = new HashMap<>();
+    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+    props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
+    return props;
   }
 }
