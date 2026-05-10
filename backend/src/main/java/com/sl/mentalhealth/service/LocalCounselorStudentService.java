@@ -2,6 +2,8 @@ package com.sl.mentalhealth.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sl.mentalhealth.entity.CounselorClassMapping;
 import com.sl.mentalhealth.entity.Student;
 import com.sl.mentalhealth.entity.StudentAssessmentSemesterSummary;
@@ -14,8 +16,10 @@ import com.sl.mentalhealth.vo.CounselorStudentPageVO;
 import com.sl.mentalhealth.vo.CounselorStudentVO;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,9 +29,18 @@ import org.springframework.util.StringUtils;
 @Transactional(readOnly = true)
 public class LocalCounselorStudentService {
 
+  /**
+   * 辅导员管理班级缓存时间。
+   * 管理员修改绑定关系时，需要主动删除 counselor:classes:{account}。
+   */
+  private static final long MANAGED_CLASSES_CACHE_TTL_HOURS = 24L;
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   private final CounselorClassMappingMapper counselorClassMappingMapper;
   private final StudentMapper studentMapper;
   private final StudentAssessmentSemesterSummaryMapper studentAssessmentSemesterSummaryMapper;
+  private final StringRedisTemplate stringRedisTemplate;
 
   public List<String> listManagedClasses(String counselorAccount) {
     validateCounselorAccount(counselorAccount);
@@ -111,8 +124,25 @@ public class LocalCounselorStudentService {
         .build();
   }
 
+  /**
+   * 管理员修改辅导员-班级绑定后可以调用。
+   */
+  public void evictManagedClassesCache(String counselorAccount) {
+    if (!StringUtils.hasText(counselorAccount)) {
+      return;
+    }
+    stringRedisTemplate.delete(buildManagedClassesCacheKey(counselorAccount.trim()));
+  }
+
   private List<String> getManagedClasses(String counselorAccount) {
-    return counselorClassMappingMapper.selectList(
+    String cacheKey = buildManagedClassesCacheKey(counselorAccount);
+
+    List<String> cachedClasses = readStringListCache(cacheKey);
+    if (cachedClasses != null) {
+      return cachedClasses;
+    }
+
+    List<String> classes = counselorClassMappingMapper.selectList(
             Wrappers.<CounselorClassMapping>lambdaQuery()
                 .eq(CounselorClassMapping::getCounselorAccount, counselorAccount)
                 .orderByAsc(CounselorClassMapping::getClassName)
@@ -122,6 +152,10 @@ public class LocalCounselorStudentService {
         .filter(StringUtils::hasText)
         .distinct()
         .collect(Collectors.toList());
+
+    writeJsonCache(cacheKey, classes, MANAGED_CLASSES_CACHE_TTL_HOURS, TimeUnit.HOURS);
+
+    return classes;
   }
 
   private CounselorStudentVO toStudentVO(Student student) {
@@ -148,6 +182,41 @@ public class LocalCounselorStudentService {
         .createdAt(summary.getCreatedAt())
         .updatedAt(summary.getUpdatedAt())
         .build();
+  }
+
+  private String buildManagedClassesCacheKey(String counselorAccount) {
+    return "counselor:classes:" + normalizeKeyPart(counselorAccount);
+  }
+
+  private List<String> readStringListCache(String key) {
+    String json = stringRedisTemplate.opsForValue().get(key);
+    if (!StringUtils.hasText(json)) {
+      return null;
+    }
+
+    try {
+      return OBJECT_MAPPER.readValue(json, new TypeReference<List<String>>() {
+      });
+    } catch (Exception e) {
+      stringRedisTemplate.delete(key);
+      return null;
+    }
+  }
+
+  private void writeJsonCache(String key, Object value, long timeout, TimeUnit unit) {
+    try {
+      String json = OBJECT_MAPPER.writeValueAsString(value);
+      stringRedisTemplate.opsForValue().set(key, json, timeout, unit);
+    } catch (Exception ignored) {
+      // Redis 缓存失败不影响主业务查询
+    }
+  }
+
+  private String normalizeKeyPart(String value) {
+    if (!StringUtils.hasText(value)) {
+      return "unknown";
+    }
+    return value.trim().replace(":", "_").replace(" ", "_");
   }
 
   private void validateCounselorAccount(String counselorAccount) {

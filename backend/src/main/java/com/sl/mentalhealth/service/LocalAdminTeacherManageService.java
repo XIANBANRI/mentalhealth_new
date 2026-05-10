@@ -8,6 +8,7 @@ import com.sl.mentalhealth.entity.Teacher;
 import com.sl.mentalhealth.kafka.message.AdminTeacherManageRequestMessage;
 import com.sl.mentalhealth.kafka.message.AdminTeacherManageResponseMessage;
 import com.sl.mentalhealth.mapper.TeacherMapper;
+import com.sl.mentalhealth.utils.PasswordUtil;
 import com.sl.mentalhealth.vo.AdminTeacherPageVO;
 import com.sl.mentalhealth.vo.AdminTeacherVO;
 import java.util.ArrayList;
@@ -64,7 +65,8 @@ public class LocalAdminTeacherManageService {
   }
 
   private AdminTeacherPageVO queryPage(AdminTeacherQueryRequest request) {
-    AdminTeacherQueryRequest queryRequest = request == null ? new AdminTeacherQueryRequest() : request;
+    AdminTeacherQueryRequest queryRequest =
+        request == null ? new AdminTeacherQueryRequest() : request;
 
     int pageNum = queryRequest.getPageNum() == null || queryRequest.getPageNum() < 1
         ? 1 : queryRequest.getPageNum();
@@ -96,10 +98,12 @@ public class LocalAdminTeacherManageService {
 
   private AdminTeacherVO detail(String account) {
     String teacherAccount = required(account, "老师账号不能为空");
+
     Teacher teacher = teacherMapper.selectById(teacherAccount);
     if (teacher == null) {
       throw new RuntimeException("心理老师不存在");
     }
+
     return toVO(teacher);
   }
 
@@ -117,7 +121,7 @@ public class LocalAdminTeacherManageService {
 
     Teacher teacher = new Teacher();
     teacher.setAccount(account);
-    teacher.setPassword(password);
+    teacher.setPassword(PasswordUtil.encode(password));
     teacher.setTeacherName(normalize(request.getTeacherName()));
     teacher.setOfficeLocation(normalize(request.getOfficeLocation()));
     teacher.setPhone(normalize(request.getPhone()));
@@ -141,7 +145,7 @@ public class LocalAdminTeacherManageService {
 
     String password = normalize(request.getPassword());
     if (password != null) {
-      teacher.setPassword(password);
+      teacher.setPassword(PasswordUtil.encode(password));
     }
 
     if (request.getTeacherName() != null) {
@@ -186,6 +190,7 @@ public class LocalAdminTeacherManageService {
     if (value == null) {
       return null;
     }
+
     String trimmed = value.trim();
     return trimmed.isEmpty() ? null : trimmed;
   }

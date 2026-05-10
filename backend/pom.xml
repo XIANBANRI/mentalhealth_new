@@ -41,12 +41,6 @@
       <artifactId>spring-boot-starter-webmvc</artifactId>
     </dependency>
 
-    <!-- Jackson -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-jackson</artifactId>
-    </dependency>
-
     <!-- MyBatis-Plus -->
     <dependency>
       <groupId>com.baomidou</groupId>
@@ -96,6 +90,18 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- Password Encrypt / BCrypt -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-crypto</artifactId>
+    </dependency>
+
+    <!-- Jackson JSON -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
     <!-- JWT -->
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
@@ -132,7 +138,6 @@
   </dependencies>
 
   <build>
-    <finalName>mentalhealth</finalName>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>

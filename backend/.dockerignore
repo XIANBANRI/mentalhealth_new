@@ -1,0 +1,7 @@
+.git
+.idea
+target/*.jar.original
+target/classes
+target/test-classes
+node_modules
+frontend

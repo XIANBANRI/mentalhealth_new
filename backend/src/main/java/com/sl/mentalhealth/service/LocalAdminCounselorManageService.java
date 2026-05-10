@@ -13,6 +13,7 @@ import com.sl.mentalhealth.kafka.message.AdminCounselorManageRequestMessage;
 import com.sl.mentalhealth.kafka.message.AdminCounselorManageResponseMessage;
 import com.sl.mentalhealth.mapper.CounselorClassMappingMapper;
 import com.sl.mentalhealth.mapper.CounselorMapper;
+import com.sl.mentalhealth.utils.PasswordUtil;
 import com.sl.mentalhealth.vo.AdminCounselorDetailVO;
 import com.sl.mentalhealth.vo.AdminCounselorPageVO;
 import com.sl.mentalhealth.vo.AdminCounselorVO;
@@ -95,15 +96,19 @@ public class LocalAdminCounselorManageService {
     if (StringUtils.hasText(queryRequest.getAccount())) {
       queryWrapper.like(Counselor::getAccount, queryRequest.getAccount().trim());
     }
+
     if (StringUtils.hasText(queryRequest.getName())) {
       queryWrapper.like(Counselor::getName, queryRequest.getName().trim());
     }
+
     if (StringUtils.hasText(queryRequest.getCollege())) {
       queryWrapper.like(Counselor::getCollege, queryRequest.getCollege().trim());
     }
+
     if (StringUtils.hasText(queryRequest.getGrade())) {
       queryWrapper.like(Counselor::getGrade, queryRequest.getGrade().trim());
     }
+
     if (StringUtils.hasText(queryRequest.getPhone())) {
       queryWrapper.like(Counselor::getPhone, queryRequest.getPhone().trim());
     }
@@ -128,10 +133,12 @@ public class LocalAdminCounselorManageService {
 
   private AdminCounselorDetailVO detail(String account) {
     String counselorAccount = required(account, "辅导员账号不能为空");
+
     Counselor counselor = counselorMapper.selectById(counselorAccount);
     if (counselor == null) {
       throw new RuntimeException("辅导员不存在");
     }
+
     return toDetailVO(counselor);
   }
 
@@ -154,7 +161,7 @@ public class LocalAdminCounselorManageService {
     Counselor counselor = new Counselor();
     counselor.setAccount(account);
     counselor.setName(name);
-    counselor.setPassword(password);
+    counselor.setPassword(PasswordUtil.encode(password));
     counselor.setCollege(college);
     counselor.setGrade(grade);
     counselor.setPhone(phone);
@@ -181,19 +188,22 @@ public class LocalAdminCounselorManageService {
     if (request.getName() != null) {
       counselor.setName(normalize(request.getName()));
     }
+
     if (request.getCollege() != null) {
       counselor.setCollege(normalize(request.getCollege()));
     }
+
     if (request.getGrade() != null) {
       counselor.setGrade(normalize(request.getGrade()));
     }
+
     if (request.getPhone() != null) {
       counselor.setPhone(normalize(request.getPhone()));
     }
 
     String password = normalize(request.getPassword());
     if (password != null) {
-      counselor.setPassword(password);
+      counselor.setPassword(PasswordUtil.encode(password));
     }
 
     counselorMapper.updateById(counselor);
@@ -246,6 +256,7 @@ public class LocalAdminCounselorManageService {
             .eq(CounselorClassMapping::getClassName, className)
             .last("LIMIT 1")
     );
+
     return list.isEmpty() ? null : list.get(0);
   }
 
@@ -269,6 +280,7 @@ public class LocalAdminCounselorManageService {
         set.add(className);
       }
     }
+
     return new ArrayList<>(set);
   }
 
@@ -297,6 +309,7 @@ public class LocalAdminCounselorManageService {
     for (CounselorClassMapping mapping : mappings) {
       classList.add(mapping.getClassName());
     }
+
     vo.setClassList(classList);
     return vo;
   }
@@ -306,6 +319,7 @@ public class LocalAdminCounselorManageService {
     if (result == null) {
       throw new RuntimeException(message);
     }
+
     return result;
   }
 
@@ -313,6 +327,7 @@ public class LocalAdminCounselorManageService {
     if (value == null) {
       return null;
     }
+
     String trimmed = value.trim();
     return trimmed.isEmpty() ? null : trimmed;
   }

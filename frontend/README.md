@@ -4,7 +4,7 @@
 ```
 npm install
 ```
-
+docker compose down
 ### Compiles and hot-reloads for development
 ```
 npm run serve

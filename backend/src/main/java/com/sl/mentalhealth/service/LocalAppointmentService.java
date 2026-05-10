@@ -23,9 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -36,13 +43,31 @@ public class LocalAppointmentService {
   private static final List<String> OCCUPIED_STATUS = List.of("PENDING", "APPROVED", "COMPLETED");
   private static final List<String> DUPLICATE_STATUS = List.of("PENDING", "APPROVED");
 
+  private static final String AVAILABLE_APPOINTMENT_CACHE_NAME = "availableAppointment";
+
+  /**
+   * 预约创建分布式锁配置。
+   * 最多等待3秒获取锁。
+   * 锁自动过期10秒，防止服务异常导致死锁。
+   * 每100毫秒重试一次。
+   */
+  private static final long APPOINTMENT_LOCK_WAIT_MILLIS = 3000L;
+  private static final long APPOINTMENT_LOCK_RETRY_INTERVAL_MILLIS = 100L;
+  private static final long APPOINTMENT_LOCK_EXPIRE_SECONDS = 10L;
+
   private final AppointmentMapper appointmentMapper;
   private final TeacherScheduleMapper teacherScheduleMapper;
   private final TeacherMapper teacherMapper;
   private final StudentMapper studentMapper;
+  private final StringRedisTemplate stringRedisTemplate;
+  private final TransactionTemplate transactionTemplate;
 
+  @Cacheable(
+      cacheNames = AVAILABLE_APPOINTMENT_CACHE_NAME,
+      key = "#dateStr == null || #dateStr.isBlank() ? T(java.time.LocalDate).now().toString() : #dateStr.trim()"
+  )
   public List<AvailableAppointmentVO> studentAvailable(String dateStr) {
-    LocalDate date = (dateStr == null || dateStr.isBlank()) ? LocalDate.now() : LocalDate.parse(dateStr);
+    LocalDate date = parseAppointmentDate(dateStr);
     int weekDay = convertWeekDay(date.getDayOfWeek());
 
     List<TeacherSchedule> schedules =
@@ -76,7 +101,10 @@ public class LocalAppointmentService {
     return result;
   }
 
-  @Transactional(rollbackFor = Exception.class)
+  @CacheEvict(
+      cacheNames = AVAILABLE_APPOINTMENT_CACHE_NAME,
+      key = "#appointmentDateStr.trim()"
+  )
   public Long studentCreate(
       String studentId,
       Long scheduleId,
@@ -94,14 +122,44 @@ public class LocalAppointmentService {
       throw new RuntimeException("预约日期不能为空");
     }
 
+    LocalDate appointmentDate = LocalDate.parse(appointmentDateStr.trim());
+    if (appointmentDate.isBefore(LocalDate.now())) {
+      throw new RuntimeException("不能预约过去日期");
+    }
+
+    String lockKey = buildAppointmentCreateLockKey(scheduleId);
+    String lockValue = UUID.randomUUID().toString();
+
+    boolean locked = tryAcquireLock(lockKey, lockValue);
+    if (!locked) {
+      throw new RuntimeException("当前预约人数较多，请稍后重试");
+    }
+
+    try {
+      Long appointmentId = transactionTemplate.execute(status ->
+          doStudentCreate(studentId, scheduleId, appointmentDate, purpose, remark)
+      );
+
+      if (appointmentId == null) {
+        throw new RuntimeException("预约失败");
+      }
+
+      return appointmentId;
+    } finally {
+      releaseLock(lockKey, lockValue);
+    }
+  }
+
+  private Long doStudentCreate(
+      String studentId,
+      Long scheduleId,
+      LocalDate appointmentDate,
+      String purpose,
+      String remark
+  ) {
     Student student = studentMapper.selectById(studentId);
     if (student == null) {
       throw new RuntimeException("学生不存在");
-    }
-
-    LocalDate appointmentDate = LocalDate.parse(appointmentDateStr);
-    if (appointmentDate.isBefore(LocalDate.now())) {
-      throw new RuntimeException("不能预约过去日期");
     }
 
     TeacherSchedule schedule = teacherScheduleMapper.selectById(scheduleId);
@@ -171,6 +229,7 @@ public class LocalAppointmentService {
     return buildAppointmentVOList(list);
   }
 
+  @CacheEvict(cacheNames = AVAILABLE_APPOINTMENT_CACHE_NAME, allEntries = true)
   @Transactional(rollbackFor = Exception.class)
   public void studentCancel(Long appointmentId, String studentId) {
     Appointment appointment = appointmentMapper.selectOne(new LambdaQueryWrapper<Appointment>()
@@ -204,7 +263,7 @@ public class LocalAppointmentService {
 
     LocalDate date = null;
     if (dateStr != null && !dateStr.isBlank()) {
-      date = LocalDate.parse(dateStr);
+      date = LocalDate.parse(dateStr.trim());
     }
 
     LambdaQueryWrapper<Appointment> wrapper = new LambdaQueryWrapper<Appointment>()
@@ -248,6 +307,7 @@ public class LocalAppointmentService {
     appointmentMapper.updateById(appointment);
   }
 
+  @CacheEvict(cacheNames = AVAILABLE_APPOINTMENT_CACHE_NAME, allEntries = true)
   @Transactional(rollbackFor = Exception.class)
   public void teacherReject(Long appointmentId, String teacherAccount, String rejectReason) {
     Appointment appointment = appointmentMapper.selectOne(new LambdaQueryWrapper<Appointment>()
@@ -403,6 +463,13 @@ public class LocalAppointmentService {
     return studentMap;
   }
 
+  private LocalDate parseAppointmentDate(String dateStr) {
+    if (dateStr == null || dateStr.isBlank()) {
+      return LocalDate.now();
+    }
+    return LocalDate.parse(dateStr.trim());
+  }
+
   private int convertWeekDay(DayOfWeek dayOfWeek) {
     return switch (dayOfWeek) {
       case MONDAY -> 1;
@@ -413,6 +480,48 @@ public class LocalAppointmentService {
       case SATURDAY -> 6;
       case SUNDAY -> 7;
     };
+  }
+
+  private String buildAppointmentCreateLockKey(Long scheduleId) {
+    return "schedule:" + scheduleId + ":create";
+  }
+
+  private boolean tryAcquireLock(String lockKey, String lockValue) {
+    long deadline = System.currentTimeMillis() + APPOINTMENT_LOCK_WAIT_MILLIS;
+
+    while (System.currentTimeMillis() < deadline) {
+      Boolean success = stringRedisTemplate.opsForValue().setIfAbsent(
+          lockKey,
+          lockValue,
+          APPOINTMENT_LOCK_EXPIRE_SECONDS,
+          TimeUnit.SECONDS
+      );
+
+      if (Boolean.TRUE.equals(success)) {
+        return true;
+      }
+
+      try {
+        Thread.sleep(APPOINTMENT_LOCK_RETRY_INTERVAL_MILLIS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException("预约请求被中断，请稍后重试");
+      }
+    }
+
+    return false;
+  }
+
+  private void releaseLock(String lockKey, String lockValue) {
+    DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+    script.setScriptText(
+        "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+            "return redis.call('del', KEYS[1]) " +
+            "else return 0 end"
+    );
+    script.setResultType(Long.class);
+
+    stringRedisTemplate.execute(script, Collections.singletonList(lockKey), lockValue);
   }
 
   private String generateAppointmentNo() {

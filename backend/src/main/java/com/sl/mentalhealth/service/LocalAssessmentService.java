@@ -21,8 +21,6 @@ import com.sl.mentalhealth.mapper.AssessmentVersionRuleMapper;
 import com.sl.mentalhealth.mapper.StudentAssessmentAnswerMapper;
 import com.sl.mentalhealth.mapper.StudentAssessmentRecordMapper;
 import com.sl.mentalhealth.mapper.StudentAssessmentSemesterSummaryMapper;
-import com.sl.mentalhealth.vo.AssessmentOptionVO;
-import com.sl.mentalhealth.vo.AssessmentQuestionVO;
 import com.sl.mentalhealth.vo.AssessmentRecordDetailVO;
 import com.sl.mentalhealth.vo.AssessmentRecordVO;
 import com.sl.mentalhealth.vo.AssessmentScaleDetailVO;
@@ -31,14 +29,14 @@ import com.sl.mentalhealth.vo.AssessmentSubmitResultVO;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -51,6 +49,20 @@ public class LocalAssessmentService {
 
   private static final String DEFAULT_SEMESTER = "第1学期";
   private static final String STATUS_COMPLETED = "COMPLETED";
+
+  /**
+   * 测评提交幂等 key 的短期有效时间。
+   * 主要防止前端重复点击、网络重试、短时间重复提交。
+   */
+  private static final long ASSESSMENT_SUBMIT_IDEMPOTENT_TTL_SECONDS = 30L;
+
+  /**
+   * 测评提交限流：
+   * 同一学生每60秒最多允许提交2次测评。
+   */
+  private static final int ASSESSMENT_SUBMIT_RATE_LIMIT_COUNT = 2;
+  private static final long ASSESSMENT_SUBMIT_RATE_LIMIT_SECONDS = 60L;
+
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -62,6 +74,8 @@ public class LocalAssessmentService {
   private final StudentAssessmentRecordMapper studentAssessmentRecordMapper;
   private final StudentAssessmentAnswerMapper studentAssessmentAnswerMapper;
   private final StudentAssessmentSemesterSummaryMapper studentAssessmentSemesterSummaryMapper;
+  private final StringRedisTemplate stringRedisTemplate;
+  private final AssessmentScaleCacheService assessmentScaleCacheService;
 
   public LocalAssessmentService(
       AssessmentScaleMapper scaleMapper,
@@ -71,7 +85,9 @@ public class LocalAssessmentService {
       AssessmentVersionRuleMapper versionRuleMapper,
       StudentAssessmentRecordMapper studentAssessmentRecordMapper,
       StudentAssessmentAnswerMapper studentAssessmentAnswerMapper,
-      StudentAssessmentSemesterSummaryMapper studentAssessmentSemesterSummaryMapper) {
+      StudentAssessmentSemesterSummaryMapper studentAssessmentSemesterSummaryMapper,
+      StringRedisTemplate stringRedisTemplate,
+      AssessmentScaleCacheService assessmentScaleCacheService) {
     this.scaleMapper = scaleMapper;
     this.scaleVersionMapper = scaleVersionMapper;
     this.versionQuestionMapper = versionQuestionMapper;
@@ -80,6 +96,8 @@ public class LocalAssessmentService {
     this.studentAssessmentRecordMapper = studentAssessmentRecordMapper;
     this.studentAssessmentAnswerMapper = studentAssessmentAnswerMapper;
     this.studentAssessmentSemesterSummaryMapper = studentAssessmentSemesterSummaryMapper;
+    this.stringRedisTemplate = stringRedisTemplate;
+    this.assessmentScaleCacheService = assessmentScaleCacheService;
   }
 
   public AssessmentResponseMessage handle(AssessmentRequestMessage request) {
@@ -93,37 +111,11 @@ public class LocalAssessmentService {
   }
 
   private AssessmentResponseMessage listScales(String requestId) {
-    List<AssessmentScaleVO> list = scaleMapper.selectList(
-            new LambdaQueryWrapper<AssessmentScale>()
-                .eq(AssessmentScale::getStatus, 1)
-                .orderByAsc(AssessmentScale::getId)
-        ).stream()
-        .filter(scale -> !Objects.equals(scale.getDeletedFlag(), 1))
-        .filter(scale -> scale.getCurrentVersionId() != null)
-        .map(this::buildScaleVO)
-        .collect(Collectors.toList());
+    List<AssessmentScaleVO> list = assessmentScaleCacheService.listScales();
 
     AssessmentResponseMessage response = success(requestId, "查询成功");
     response.setScales(list);
     return response;
-  }
-
-  private AssessmentScaleVO buildScaleVO(AssessmentScale scale) {
-    Integer versionNo = null;
-    if (scale.getCurrentVersionId() != null) {
-      AssessmentScaleVersion version = scaleVersionMapper.selectById(scale.getCurrentVersionId());
-      versionNo = version == null ? null : version.getVersionNo();
-    }
-    return new AssessmentScaleVO(
-        scale.getId(),
-        scale.getScaleCode(),
-        scale.getScaleName(),
-        scale.getScaleType(),
-        scale.getDescription(),
-        scale.getQuestionCount(),
-        scale.getCurrentVersionId(),
-        versionNo
-    );
   }
 
   private AssessmentResponseMessage getDetail(String requestId, Long scaleId) {
@@ -131,82 +123,67 @@ public class LocalAssessmentService {
       return fail(requestId, "量表ID不能为空");
     }
 
-    AssessmentScale scale = scaleMapper.selectById(scaleId);
-    if (scale == null || Objects.equals(scale.getDeletedFlag(), 1)
-        || !Objects.equals(scale.getStatus(), 1)) {
-      return fail(requestId, "量表不存在或已停用");
+    try {
+      AssessmentScaleDetailVO detail = assessmentScaleCacheService.getDetail(scaleId);
+
+      AssessmentResponseMessage response = success(requestId, "查询成功");
+      response.setDetail(detail);
+      return response;
+    } catch (RuntimeException e) {
+      return fail(requestId, e.getMessage() == null ? "量表查询失败" : e.getMessage());
     }
-
-    Long versionId = scale.getCurrentVersionId();
-    if (versionId == null) {
-      return fail(requestId, "当前量表没有可用版本");
-    }
-
-    AssessmentScaleVersion version = scaleVersionMapper.selectById(versionId);
-    if (version == null) {
-      return fail(requestId, "量表当前版本不存在");
-    }
-
-    List<AssessmentVersionQuestion> questions = versionQuestionMapper.selectList(
-        new LambdaQueryWrapper<AssessmentVersionQuestion>()
-            .eq(AssessmentVersionQuestion::getVersionId, versionId)
-            .orderByAsc(AssessmentVersionQuestion::getQuestionNo)
-    );
-    if (questions.isEmpty()) {
-      return fail(requestId, "量表题目不存在");
-    }
-
-    List<Long> questionIds = questions.stream().map(AssessmentVersionQuestion::getId).toList();
-    List<AssessmentVersionOption> options = questionIds.isEmpty()
-        ? Collections.emptyList()
-        : versionOptionMapper.selectList(
-            new LambdaQueryWrapper<AssessmentVersionOption>()
-                .in(AssessmentVersionOption::getVersionQuestionId, questionIds)
-                .orderByAsc(AssessmentVersionOption::getVersionQuestionId)
-                .orderByAsc(AssessmentVersionOption::getOptionNo)
-        );
-
-    Map<Long, List<AssessmentOptionVO>> optionMap = options.stream()
-        .collect(Collectors.groupingBy(
-            AssessmentVersionOption::getVersionQuestionId,
-            LinkedHashMap::new,
-            Collectors.mapping(
-                option -> new AssessmentOptionVO(
-                    option.getId(),
-                    option.getOptionNo(),
-                    option.getOptionText(),
-                    option.getOptionScore()
-                ),
-                Collectors.toList()
-            )
-        ));
-
-    List<AssessmentQuestionVO> questionVOList = questions.stream()
-        .map(question -> new AssessmentQuestionVO(
-            question.getId(),
-            question.getQuestionNo(),
-            question.getQuestionText(),
-            question.getRequiredFlag(),
-            optionMap.getOrDefault(question.getId(), new ArrayList<>())
-        ))
-        .collect(Collectors.toList());
-
-    AssessmentScaleDetailVO detail = new AssessmentScaleDetailVO(
-        scale.getId(),
-        scale.getScaleCode(),
-        scale.getScaleName(),
-        scale.getDescription(),
-        version.getId(),
-        version.getVersionNo(),
-        questionVOList
-    );
-
-    AssessmentResponseMessage response = success(requestId, "查询成功");
-    response.setDetail(detail);
-    return response;
   }
 
   private AssessmentResponseMessage submit(AssessmentRequestMessage request) {
+    String requestId = request.getRequestId();
+    String studentId = trimToNull(request.getStudentId());
+    String semester = trimToNull(request.getSemester());
+    Long scaleId = request.getScaleId();
+
+    if (studentId == null) {
+      return fail(requestId, "学号不能为空");
+    }
+    if (scaleId == null) {
+      return fail(requestId, "量表ID不能为空");
+    }
+    if (semester == null) {
+      semester = DEFAULT_SEMESTER;
+    }
+
+    String idempotentKey = buildAssessmentSubmitIdempotentKey(studentId, scaleId, semester);
+
+    Boolean acquired = stringRedisTemplate.opsForValue().setIfAbsent(
+        idempotentKey,
+        requestId == null ? "unknown" : requestId,
+        ASSESSMENT_SUBMIT_IDEMPOTENT_TTL_SECONDS,
+        TimeUnit.SECONDS
+    );
+
+    if (!Boolean.TRUE.equals(acquired)) {
+      return fail(requestId, "请勿重复提交，稍后再试");
+    }
+
+    try {
+      boolean rateLimited = recordAndCheckAssessmentSubmitRateLimit(studentId);
+      if (rateLimited) {
+        stringRedisTemplate.delete(idempotentKey);
+        return fail(requestId, "测评提交过于频繁，请1分钟后再试");
+      }
+
+      AssessmentResponseMessage response = doSubmit(request);
+
+      if (!Boolean.TRUE.equals(response.getSuccess())) {
+        stringRedisTemplate.delete(idempotentKey);
+      }
+
+      return response;
+    } catch (Exception e) {
+      stringRedisTemplate.delete(idempotentKey);
+      return fail(requestId, e.getMessage() == null ? "提交失败" : e.getMessage());
+    }
+  }
+
+  private AssessmentResponseMessage doSubmit(AssessmentRequestMessage request) {
     String requestId = request.getRequestId();
     String studentId = trimToNull(request.getStudentId());
     String semester = trimToNull(request.getSemester());
@@ -278,9 +255,12 @@ public class LocalAssessmentService {
       return fail(requestId, "题目未全部完成");
     }
 
-    List<Long> questionIds = questions.stream().map(AssessmentVersionQuestion::getId).toList();
+    List<Long> questionIds = questions.stream()
+        .map(AssessmentVersionQuestion::getId)
+        .toList();
+
     List<AssessmentVersionOption> optionList = questionIds.isEmpty()
-        ? Collections.emptyList()
+        ? List.of()
         : versionOptionMapper.selectList(
             new LambdaQueryWrapper<AssessmentVersionOption>()
                 .in(AssessmentVersionOption::getVersionQuestionId, questionIds)
@@ -343,7 +323,7 @@ public class LocalAssessmentService {
         .findFirstByStudentIdAndSemesterAndScaleId(studentId, semester, scale.getId())
         .orElseGet(StudentAssessmentRecord::new);
 
-    boolean isNewRecord = (record.getId() == null);
+    boolean isNewRecord = record.getId() == null;
 
     if (isNewRecord) {
       record.setStudentId(studentId);
@@ -516,7 +496,9 @@ public class LocalAssessmentService {
     vo.setLastTestedAt(summary.getLastTestedAt() == null
         ? null
         : DATE_TIME_FORMATTER.format(summary.getLastTestedAt()));
-    vo.setDetails(detailRecords.stream().map(this::buildRecordDetailVO).collect(Collectors.toList()));
+    vo.setDetails(detailRecords.stream()
+        .map(this::buildRecordDetailVO)
+        .collect(Collectors.toList()));
     return vo;
   }
 
@@ -552,6 +534,44 @@ public class LocalAssessmentService {
         ? null
         : DATE_TIME_FORMATTER.format(record.getSubmittedAt()));
     return vo;
+  }
+
+  private boolean recordAndCheckAssessmentSubmitRateLimit(String studentId) {
+    String key = buildAssessmentSubmitRateLimitKey(studentId);
+
+    Long count = stringRedisTemplate.opsForValue().increment(key);
+
+    if (count == null) {
+      count = 1L;
+    }
+
+    Long ttl = stringRedisTemplate.getExpire(key, TimeUnit.SECONDS);
+
+    if (ttl == null || ttl < 0) {
+      stringRedisTemplate.expire(key, ASSESSMENT_SUBMIT_RATE_LIMIT_SECONDS, TimeUnit.SECONDS);
+    }
+
+    return count > ASSESSMENT_SUBMIT_RATE_LIMIT_COUNT;
+  }
+
+  private String buildAssessmentSubmitIdempotentKey(String studentId, Long scaleId, String semester) {
+    return "assessment:submit:"
+        + normalizeKeyPart(studentId)
+        + ":"
+        + scaleId
+        + ":"
+        + normalizeKeyPart(semester);
+  }
+
+  private String buildAssessmentSubmitRateLimitKey(String studentId) {
+    return "assessment:submit:rate:" + normalizeKeyPart(studentId);
+  }
+
+  private String normalizeKeyPart(String value) {
+    if (value == null || value.trim().isEmpty()) {
+      return "unknown";
+    }
+    return value.trim().replace(":", "_").replace(" ", "_");
   }
 
   private String trimToNull(String value) {
