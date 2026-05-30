@@ -51,10 +51,13 @@ public class LocalAssessmentScaleManageService {
     AssessmentScale exists = assessmentScaleMapper.selectOne(
         new LambdaQueryWrapper<AssessmentScale>()
             .eq(AssessmentScale::getScaleCode, request.getScaleCode())
+            .eq(AssessmentScale::getDeletedFlag, 0)
+            .last("limit 1")
     );
     if (exists != null) {
       throw new RuntimeException("量表编码已存在");
     }
+
     if (request.getQuestions() == null || request.getQuestions().isEmpty()) {
       throw new RuntimeException("题目不能为空");
     }
@@ -124,9 +127,11 @@ public class LocalAssessmentScaleManageService {
       vo.setScoreMax(scale.getScoreMax());
       vo.setStatus(scale.getStatus());
       vo.setDeletedFlag(scale.getDeletedFlag());
+
       if (scale.getCurrentVersionId() != null && versionMap.containsKey(scale.getCurrentVersionId())) {
         vo.setCurrentVersionNo(versionMap.get(scale.getCurrentVersionId()).getVersionNo());
       }
+
       result.add(vo);
     }
     return result;
@@ -260,7 +265,7 @@ public class LocalAssessmentScaleManageService {
       throw new RuntimeException("量表不存在");
     }
 
-    if (scale.getDeletedFlag() == 1) {
+    if (scale.getDeletedFlag() != null && scale.getDeletedFlag() == 1) {
       throw new RuntimeException("量表已删除，不能启用");
     }
 
@@ -310,6 +315,12 @@ public class LocalAssessmentScaleManageService {
 
     scale.setDeletedFlag(1);
     scale.setStatus(0);
+
+    // 关键修改：逻辑删除时释放原量表编码，避免以后新增同编码量表时报“量表编码已存在”
+    if (scale.getScaleCode() != null && !scale.getScaleCode().contains("_deleted_")) {
+      scale.setScaleCode(scale.getScaleCode() + "_deleted_" + scale.getId());
+    }
+
     assessmentScaleMapper.updateById(scale);
 
     if (scale.getCurrentVersionId() != null) {

@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <el-card class="login-card">
-      <h2>心理健康管理系统</h2>
+      <h2>心理健康监测系统</h2>
 
       <el-form :model="form" @keyup.enter="login">
         <el-form-item label="身份选择">
